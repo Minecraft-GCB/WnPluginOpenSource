@@ -1,0 +1,103 @@
+name: WnPlugin
+version: 1.1-ALPHA
+main: plugins.wnplugin.WnPlugin
+api-version: 1.16
+prefix: WnPlugin
+load: STARTUP
+authors: [ GCBqwq ]
+description: This is a plugin.
+commands:
+  hello:
+    description: Tell a Hello
+    usage: use /hello
+  healself:
+    description: Heal self
+    usage: use /healself
+    permission: wnplugin.healself
+  setlevel:
+    description: Set player's level
+    usage: use /setlevel <int level> [String name]
+    permission: wnplugin.setlevel
+  setexp:
+    description: Set player's exp
+    usage: use /setexp <float exp> [String name]
+    permission: wnplugin.setexp
+  cleanplayer:
+    description: Clean player's inventory
+    usage: use /cleanplayer [String name]
+    permission: wnplugin.cleanplayer
+  trade:
+    description: Trade with player
+    usage: use /trade <send:accept:deny> [String name]
+    permission: wnplugin.trade
+  nobreak:
+    description: Set player break
+    usage: use /nobreak <disable:enable> [String name]
+    permission: wnplugin.nobreak
+  setbuild:
+    description: Set player build
+    usage: use /canbuild <disable:enable> [String name]
+    permission: wnplugin.setbuild
+  resettry:
+    description: Reset player try times
+    usage: use /resettry <String name>
+    permission: wnplugin.resettry
+  fixmode:
+    description: Set fix mode
+    usage: use /fixmode <disable:enable> [String allowPlayer]
+    permission: wnplugin.fixmode
+  fixlist:
+    description: Set fixlist
+    usage: use /fixlist <add:delete:inquire> <String name>
+    permission: wnplugin.fixlist
+  report:
+    description: Report the player
+    usage: use /report <send:cancel> <String name> <String reason>
+permissions:
+  wnplugin.*:
+    description: Gives access to all wnplugin commands
+    children:
+      wnplugin.healself: true
+      wnplugin.setlevel: true
+      wnplugin.setexp: true
+      wnplugin.cleanplayer: true
+      wnplugin.trade: true
+      wnplugin.changegamemode: true
+      wnplugin.nobreak: true
+      wnplugin.setbuild: true
+      wnplugin.resettry: true
+      wnplugin.fixmode: true
+      wnplugin.fixlist: true
+  wnplugin.healself:
+    description: Heal self
+    default: op
+  wnplugin.setlevel:
+    description: Set player's level
+    default: op
+  wnplugin.setexp:
+    description: Set player's exp
+    default: op
+  wnplugin.cleanplayer:
+    description: Clean player's inventory
+    default: op
+  wnplugin.trade:
+    description: Trade with player
+    default: true
+  wnplugin.changegamemode:
+    description: Player change gamemode permisson
+    default: op
+  wnplugin.nobreak:
+    description: Set player break
+    default: op
+  wnplugin.setbuild:
+    description: Set player build
+    default: op
+  wnplugin.resettry:
+    description: Reset player try times
+    default: op
+  wnplugin.fixmode:
+    description: Set fix mode
+    default: op
+  wnplugin.fixlist:
+    description: Set fixlist
+    default: op
