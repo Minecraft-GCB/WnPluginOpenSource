@@ -53,6 +53,10 @@ commands:
   report:
     description: Report the player
     usage: use /report <send:cancel> <String name> <String reason>
+  openinv:
+    description: Open player inventory
+    usage: use /openinv
+    permission: wnplugin.openinv
 permissions:
   wnplugin.*:
     description: Gives access to all wnplugin commands
@@ -68,6 +72,7 @@ permissions:
       wnplugin.resettry: true
       wnplugin.fixmode: true
       wnplugin.fixlist: true
+      wnplugin.openinv: true
   wnplugin.healself:
     description: Heal self
     default: op
@@ -101,3 +106,6 @@ permissions:
   wnplugin.fixlist:
     description: Set fixlist
     default: op
+  wnplugin.openinv:
+    description: Open player inventory
+    default: true

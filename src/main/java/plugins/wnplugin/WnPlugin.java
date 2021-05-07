@@ -11,6 +11,7 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockCanBuildEvent;
+import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.event.inventory.PrepareAnvilEvent;
 import org.bukkit.event.player.PlayerGameModeChangeEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
@@ -615,11 +616,43 @@ public final class WnPlugin extends JavaPlugin implements Listener{
                     return false;
                 }
             }
+            if("openinv".equals(command.getName())){
+                Inventory playerinv = Bukkit.createInventory(null,9,"§4随身背包");
+                playerinv.setItem(0,getConfig().getItemStack("inventory." + p.getName() + ".item1"));
+                playerinv.setItem(1,getConfig().getItemStack("inventory." + p.getName() + ".item2"));
+                playerinv.setItem(2,getConfig().getItemStack("inventory." + p.getName() + ".item3"));
+                playerinv.setItem(3,getConfig().getItemStack("inventory." + p.getName() + ".item4"));
+                playerinv.setItem(4,getConfig().getItemStack("inventory." + p.getName() + ".item5"));
+                playerinv.setItem(5,getConfig().getItemStack("inventory." + p.getName() + ".item6"));
+                playerinv.setItem(6,getConfig().getItemStack("inventory." + p.getName() + ".item7"));
+                playerinv.setItem(7,getConfig().getItemStack("inventory." + p.getName() + ".item8"));
+                playerinv.setItem(8,getConfig().getItemStack("inventory." + p.getName() + ".item9"));
+                p.openInventory(playerinv);
+                return true;
+            }
         }
         else{
             sender.sendMessage(ChatColor.RED + "这个指令只能由玩家执行!");
             return true;
         }
         return false;
+    }
+
+    @EventHandler
+    public void onPlayerCloseInventory(InventoryCloseEvent e){
+        String invtitle = e.getView().getTitle();
+        if("§4随身背包".equals(invtitle)){
+            getConfig().set("inventory." + e.getPlayer().getName() + ".item1",e.getInventory().getItem(0));
+            getConfig().set("inventory." + e.getPlayer().getName() + ".item2",e.getInventory().getItem(1));
+            getConfig().set("inventory." + e.getPlayer().getName() + ".item3",e.getInventory().getItem(2));
+            getConfig().set("inventory." + e.getPlayer().getName() + ".item4",e.getInventory().getItem(3));
+            getConfig().set("inventory." + e.getPlayer().getName() + ".item5",e.getInventory().getItem(4));
+            getConfig().set("inventory." + e.getPlayer().getName() + ".item6",e.getInventory().getItem(5));
+            getConfig().set("inventory." + e.getPlayer().getName() + ".item7",e.getInventory().getItem(6));
+            getConfig().set("inventory." + e.getPlayer().getName() + ".item8",e.getInventory().getItem(7));
+            getConfig().set("inventory." + e.getPlayer().getName() + ".item9",e.getInventory().getItem(8));
+            saveConfig();
+            e.getPlayer().sendMessage(ChatColor.GOLD + "随身背包已经保存！");
+        }
     }
 }
