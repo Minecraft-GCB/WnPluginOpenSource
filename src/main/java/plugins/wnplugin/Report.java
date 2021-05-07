@@ -8,7 +8,9 @@ public class Report implements CommandExecutor {
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if("report".equals(command.getName())){
+            if(args.length == 2){
 
+            }
         }
         return false;
     }
