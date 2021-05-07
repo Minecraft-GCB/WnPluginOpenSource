@@ -7,7 +7,9 @@ import org.bukkit.command.CommandSender;
 public class Report implements CommandExecutor {
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
+        if("report".equals(command.getName())){
 
+        }
         return false;
     }
 }
