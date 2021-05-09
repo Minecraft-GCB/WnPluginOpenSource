@@ -699,7 +699,10 @@ public final class WnPlugin extends JavaPlugin implements Listener{
     @EventHandler
     public void onEntityDamage(EntityDamageEvent e){
         if(e.getEntity().getType() == EntityType.PLAYER){
-            //sc
+            if(getConfig().getBoolean("player." + e.getEntity().getName() + ".godmode")){
+                e.setCancelled(true);
+                e.getEntity().sendMessage(ChatColor.GOLD + "已为您抵挡" + ChatColor.RED + e.getDamage() + ChatColor.GOLD + "点伤害！");
+            }
         }
     }
 }
