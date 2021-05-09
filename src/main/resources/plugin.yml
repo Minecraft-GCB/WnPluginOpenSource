@@ -57,6 +57,10 @@ commands:
     description: Open player inventory
     usage: use /openinv
     permission: wnplugin.openinv
+  god:
+    description: Set god mode
+    usage: use /god <String name> <enable:disable>
+    permission: wnplugin.god
 permissions:
   wnplugin.*:
     description: Gives access to all wnplugin commands
@@ -73,6 +77,7 @@ permissions:
       wnplugin.fixmode: true
       wnplugin.fixlist: true
       wnplugin.openinv: true
+      wnplugin.god: true
   wnplugin.healself:
     description: Heal self
     default: op
@@ -109,3 +114,6 @@ permissions:
   wnplugin.openinv:
     description: Open player inventory
     default: true
+  wnplugin.god:
+    description: Set god mode
+    default: op

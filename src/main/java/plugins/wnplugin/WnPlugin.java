@@ -6,12 +6,15 @@ import org.bukkit.GameMode;
 import org.bukkit.Material;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
+import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockCanBuildEvent;
+import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
+import org.bukkit.event.inventory.InventoryOpenEvent;
 import org.bukkit.event.inventory.PrepareAnvilEvent;
 import org.bukkit.event.player.PlayerGameModeChangeEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
@@ -22,6 +25,7 @@ import org.bukkit.inventory.ShapedRecipe;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitTask;
+
 import java.util.HashMap;
 
 public final class WnPlugin extends JavaPlugin implements Listener{
@@ -289,6 +293,37 @@ public final class WnPlugin extends JavaPlugin implements Listener{
                         return true;
                     }
                 }
+            }
+        }
+        else if("god".equals(command.getName())){
+            if(args.length != 2){
+                sender.sendMessage(ChatColor.RED + "参数错误！");
+                return false;
+            }
+            else{
+                Player p = Bukkit.getPlayerExact(args[0]);
+                if(p != null){
+                    if("enable".equals(args[1])){
+                        getConfig().set("player." + p.getName() + ".godmode",true);
+                        saveConfig();
+                        sender.sendMessage(ChatColor.GOLD + "已开启" + ChatColor.RED + args[0] + "的无敌模式！");
+                        p.sendMessage(ChatColor.RED + p.getName() + ChatColor.GOLD + "开启了您的无敌模式！");
+                    }
+                    else if("disable".equals(args[1])){
+                        getConfig().set("player." + p.getName() + ".godmode",false);
+                        saveConfig();
+                        sender.sendMessage(ChatColor.GOLD + "已关闭" + ChatColor.RED + args[0] + "的无敌模式！");
+                        p.sendMessage(ChatColor.RED + p.getName() + ChatColor.GOLD + "关闭了您的无敌模式！");
+                    }
+                    else{
+                        sender.sendMessage(ChatColor.RED + "参数错误！");
+                        return false;
+                    }
+                }
+                else{
+                    sender.sendMessage(ChatColor.RED + "玩家" + args[0] + "不在线！");
+                }
+                return true;
             }
         }
         if(sender instanceof Player){
@@ -653,6 +688,18 @@ public final class WnPlugin extends JavaPlugin implements Listener{
             getConfig().set("inventory." + e.getPlayer().getName() + ".item9",e.getInventory().getItem(8));
             saveConfig();
             e.getPlayer().sendMessage(ChatColor.GOLD + "随身背包已经保存！");
+        }
+    }
+
+    @EventHandler
+    public void onPlayerOpenInventory(InventoryOpenEvent e){
+        //e.setCancelled(true);
+    }
+
+    @EventHandler
+    public void onEntityDamage(EntityDamageEvent e){
+        if(e.getEntity().getType() == EntityType.PLAYER){
+            //sc
         }
     }
 }
