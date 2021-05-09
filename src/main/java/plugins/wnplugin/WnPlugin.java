@@ -701,7 +701,7 @@ public final class WnPlugin extends JavaPlugin implements Listener{
         if(e.getEntity().getType() == EntityType.PLAYER){
             if(getConfig().getBoolean("player." + e.getEntity().getName() + ".godmode")){
                 e.setCancelled(true);
-                e.getEntity().sendMessage(ChatColor.GOLD + "已为您抵挡" + ChatColor.RED + e.getDamage() + ChatColor.GOLD + "点伤害！");
+                //e.getEntity().sendMessage(ChatColor.GOLD + "已为您抵挡" + ChatColor.RED + e.getDamage() + ChatColor.GOLD + "点伤害！");
             }
         }
     }
