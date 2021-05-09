@@ -306,13 +306,13 @@ public final class WnPlugin extends JavaPlugin implements Listener{
                     if("enable".equals(args[1])){
                         getConfig().set("player." + p.getName() + ".godmode",true);
                         saveConfig();
-                        sender.sendMessage(ChatColor.GOLD + "已开启" + ChatColor.RED + args[0] + "的无敌模式！");
+                        sender.sendMessage(ChatColor.GOLD + "已开启" + ChatColor.RED + args[0] + ChatColor.GOLD + "的无敌模式！");
                         p.sendMessage(ChatColor.RED + p.getName() + ChatColor.GOLD + "开启了您的无敌模式！");
                     }
                     else if("disable".equals(args[1])){
                         getConfig().set("player." + p.getName() + ".godmode",false);
                         saveConfig();
-                        sender.sendMessage(ChatColor.GOLD + "已关闭" + ChatColor.RED + args[0] + "的无敌模式！");
+                        sender.sendMessage(ChatColor.GOLD + "已关闭" + ChatColor.RED + args[0] + ChatColor.GOLD + "的无敌模式！");
                         p.sendMessage(ChatColor.RED + p.getName() + ChatColor.GOLD + "关闭了您的无敌模式！");
                     }
                     else{
