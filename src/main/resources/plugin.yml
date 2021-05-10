@@ -61,6 +61,13 @@ commands:
     description: Set god mode
     usage: use /god <String name> <enable:disable>
     permission: wnplugin.god
+  discard:
+    description: Discard item
+    usage: use /discard
+  boom:
+    description: Create the explosion
+    usage: use /boom <String name> <float strength>
+    permission: wnplugin.boom
 permissions:
   wnplugin.*:
     description: Gives access to all wnplugin commands
@@ -78,6 +85,7 @@ permissions:
       wnplugin.fixlist: true
       wnplugin.openinv: true
       wnplugin.god: true
+      wnplugin.boom: true
   wnplugin.healself:
     description: Heal self
     default: op
@@ -116,4 +124,7 @@ permissions:
     default: true
   wnplugin.god:
     description: Set god mode
+    default: op
+  wnplugin.boom:
+    description: Create the explosion
     default: op

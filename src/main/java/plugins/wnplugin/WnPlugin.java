@@ -1,11 +1,9 @@
 package plugins.wnplugin;
 
-import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
-import org.bukkit.GameMode;
-import org.bukkit.Material;
+import org.bukkit.*;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
+import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -13,6 +11,7 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockCanBuildEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
+import org.bukkit.event.entity.FoodLevelChangeEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.event.inventory.InventoryOpenEvent;
 import org.bukkit.event.inventory.PrepareAnvilEvent;
@@ -26,9 +25,11 @@ import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitTask;
 
+import java.io.File;
 import java.util.HashMap;
 
 public final class WnPlugin extends JavaPlugin implements Listener{
+    YamlConfiguration file;
     HashMap<Player,Player> sendTrade = new HashMap<>();
 
     String Prefix = "[WnPlugin]";
@@ -41,6 +42,7 @@ public final class WnPlugin extends JavaPlugin implements Listener{
         RecipeCraft();
         getConfig().options().copyDefaults(true);
         saveConfig();
+        CustomConfig();
     }
 
     @Override
@@ -48,6 +50,18 @@ public final class WnPlugin extends JavaPlugin implements Listener{
         // Plugin shutdown logic
         Bukkit.broadcastMessage(Prefix + ChatColor.RED + " 插件关闭，丢失了" + sendTrade.size() + "个交易");
         saveConfig();
+    }
+
+    private void CustomConfig(){
+        File f = new File(this.getDataFolder(),"eco.yml");
+        if(f.exists()){
+            getLogger().info("成功找到经济配置文件，载入中！");
+            file = YamlConfiguration.loadConfiguration(f);
+        }
+        else{
+            getLogger().info("成功找到经济配置文件，创建中！");
+            this.saveResource("eco.yml",true);
+        }
     }
 
     private void RecipeCraft(){
@@ -665,6 +679,34 @@ public final class WnPlugin extends JavaPlugin implements Listener{
                 p.openInventory(playerinv);
                 return true;
             }
+            if("discard".equals(command.getName())){
+                Inventory discardinv = Bukkit.createInventory(null,54,"§b垃圾桶");
+                p.closeInventory();
+                p.openInventory(discardinv);
+                return true;
+            }
+            if("boom".equals(command.getName())){
+                if(args.length != 2){
+                    p.sendMessage(ChatColor.RED + "参数错误！");
+                }
+                else{
+                    Player target = Bukkit.getPlayerExact(args[0]);
+                    if(target == null){
+                        p.sendMessage(ChatColor.RED + "玩家不在线！");
+                    }
+                    else{
+                        Location temp = target.getLocation();
+                        Location loc = new Location(target.getWorld(),temp.getX(),temp.getY(),temp.getZ());
+                        try{
+                            float strength=Float.parseFloat(args[1]);
+                            p.getWorld().createExplosion(loc,strength);
+                        }catch (NumberFormatException e){
+                            p.sendMessage(ChatColor.RED + "参数错误，期望float，却得到String");
+                        }
+                    }
+                    return true;
+                }
+            }
         }
         else{
             sender.sendMessage(ChatColor.RED + "这个指令只能由玩家执行!");
@@ -689,6 +731,9 @@ public final class WnPlugin extends JavaPlugin implements Listener{
             saveConfig();
             e.getPlayer().sendMessage(ChatColor.GOLD + "随身背包已经保存！");
         }
+        if("§b垃圾桶".equals(invtitle)){
+            e.getPlayer().sendMessage(ChatColor.GOLD + "成功丢弃了垃圾桶中的物品！");
+        }
     }
 
     @EventHandler
@@ -702,6 +747,20 @@ public final class WnPlugin extends JavaPlugin implements Listener{
             if(getConfig().getBoolean("player." + e.getEntity().getName() + ".godmode")){
                 e.setCancelled(true);
                 //e.getEntity().sendMessage(ChatColor.GOLD + "已为您抵挡" + ChatColor.RED + e.getDamage() + ChatColor.GOLD + "点伤害！");
+            }
+        }
+    }
+
+    @EventHandler
+    public void onPlayerFoodLevelChange(FoodLevelChangeEvent e) {
+        if(e.getEntity().getType() == EntityType.PLAYER){
+            if(getConfig().getBoolean("player." + e.getEntity().getName() + ".godmode")){
+                Player p = (Player) e.getEntity();
+                if(p.getFoodLevel() != 20){
+                    p.setFoodLevel(20);
+                    e.setCancelled(true);
+
+                }
             }
         }
     }
