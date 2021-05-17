@@ -52,9 +52,6 @@ commands:
     description: Set fixlist
     usage: use /fixlist <add:delete:inquire> <String name>
     permission: wnplugin.fixlist
-  report:
-    description: Report the player
-    usage: use /report <send:cancel> <String name> <String reason>
   openinv:
     description: Open player inventory
     usage: use /openinv
