@@ -1,5 +1,6 @@
 package plugins.wnplugin;
 
+import net.milkbowl.vault.economy.*;
 import org.bukkit.*;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
@@ -25,13 +26,12 @@ import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitTask;
 
-import java.io.File;
 import java.util.HashMap;
+import java.util.List;
 
 public final class WnPlugin extends JavaPlugin implements Listener{
     YamlConfiguration file;
     HashMap<Player,Player> sendTrade = new HashMap<>();
-
     String Prefix = "[WnPlugin]";
     //Inventory anvil = Bukkit.createInventory(null,InventoryType.ANVIL,"§2Anvil");
     @Override
@@ -42,26 +42,12 @@ public final class WnPlugin extends JavaPlugin implements Listener{
         RecipeCraft();
         getConfig().options().copyDefaults(true);
         saveConfig();
-        CustomConfig();
     }
-
     @Override
     public final void onDisable() {
         // Plugin shutdown logic
         Bukkit.broadcastMessage(Prefix + ChatColor.RED + " 插件关闭，丢失了" + sendTrade.size() + "个交易");
         saveConfig();
-    }
-
-    private void CustomConfig(){
-        File f = new File(this.getDataFolder(),"eco.yml");
-        if(f.exists()){
-            getLogger().info("成功找到经济配置文件，载入中！");
-            file = YamlConfiguration.loadConfiguration(f);
-        }
-        else{
-            getLogger().info("成功找到经济配置文件，创建中！");
-            this.saveResource("eco.yml",true);
-        }
     }
 
     private void RecipeCraft(){
@@ -146,6 +132,7 @@ public final class WnPlugin extends JavaPlugin implements Listener{
                 getLogger().info(ChatColor.RED + "im is Null！");
             }
             result.setItemMeta(im);
+
         }
     }
 
@@ -339,6 +326,9 @@ public final class WnPlugin extends JavaPlugin implements Listener{
                 }
                 return true;
             }
+        }
+        else if("eco".equals(command.getName())){
+
         }
         if(sender instanceof Player){
             Player p = (Player) sender;
@@ -759,7 +749,6 @@ public final class WnPlugin extends JavaPlugin implements Listener{
                 if(p.getFoodLevel() != 20){
                     p.setFoodLevel(20);
                     e.setCancelled(true);
-
                 }
             }
         }
