@@ -1,17 +1,12 @@
 name: WnPlugin
-version: 1.1-BETA
+version: 1.1
 main: plugins.wnplugin.WnPlugin
 api-version: 1.16
 prefix: WnPlugin
 load: STARTUP
 authors: [ GCBqwq ]
 description: This is a plugin.
-depend:
-  - Vault
 commands:
-  hello:
-    description: Tell a Hello
-    usage: use /hello
   healself:
     description: Heal self
     usage: use /healself
@@ -38,7 +33,7 @@ commands:
     permission: wnplugin.nobreak
   setbuild:
     description: Set player build
-    usage: use /canbuild <disable:enable> [String name]
+    usage: use /setbuild <disable:enable> [String name]
     permission: wnplugin.setbuild
   resettry:
     description: Reset player try times
@@ -67,7 +62,33 @@ commands:
     description: Create the explosion
     usage: use /boom <String name> <float strength>
     permission: wnplugin.boom
+  eco:
+    description: Economy system
+    usage: no usage message
+    permission: wnplugin.eco
+  words:
+    description: Set words
+    usage: use /words <add:del> <String word>
+    permission: wnplugin.manage.words
+  password:
+    description: Password options
+    usage: use /password <reset:request> [String old] [String new] [String confirm]
+  mute:
+    description: Mute the player
+    usage: use /mute <String name> <disable:enable>
+    permission: wnplugin.manage.mute
 permissions:
+  wnplugin.manage.*:
+    description: Management part
+    children:
+      wnplugin.manage.words: true
+      wnplugin.manage.mute: true
+  wnplugin.manage.words:
+    description: Set words
+    default: op
+  wnplugin.manage.mute:
+    description: Mute the player
+    default: op
   wnplugin.*:
     description: Gives access to all wnplugin commands
     children:
@@ -85,6 +106,8 @@ permissions:
       wnplugin.openinv: true
       wnplugin.god: true
       wnplugin.boom: true
+      wnplugin.eco: true
+      wnplugin.manage.*: true
   wnplugin.healself:
     description: Heal self
     default: op
@@ -127,3 +150,6 @@ permissions:
   wnplugin.boom:
     description: Create the explosion
     default: op
+  wnplugin.eco:
+    description: Allow use /eco
+    default: true

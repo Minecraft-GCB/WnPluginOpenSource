@@ -1,13 +1,14 @@
 package plugins.wnplugin;
 
-import net.milkbowl.vault.economy.*;
 import org.bukkit.*;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
+import org.bukkit.event.Cancellable;
 import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockCanBuildEvent;
@@ -16,33 +17,61 @@ import org.bukkit.event.entity.FoodLevelChangeEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.event.inventory.InventoryOpenEvent;
 import org.bukkit.event.inventory.PrepareAnvilEvent;
-import org.bukkit.event.player.PlayerGameModeChangeEvent;
-import org.bukkit.event.player.PlayerJoinEvent;
-import org.bukkit.event.player.PlayerQuitEvent;
+import org.bukkit.event.player.*;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.ShapedRecipe;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitTask;
 
+import java.math.BigInteger;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Objects;
 
 public final class WnPlugin extends JavaPlugin implements Listener{
     YamlConfiguration file;
     HashMap<Player,Player> sendTrade = new HashMap<>();
+    public static List<Player> login = new ArrayList<>();
     String Prefix = "[WnPlugin]";
     //Inventory anvil = Bukkit.createInventory(null,InventoryType.ANVIL,"§2Anvil");
+
+    public static String stringToMD5(String plainText) {
+        byte[] secretBytes;
+        try {
+            secretBytes = MessageDigest.getInstance("md5").digest(
+                    plainText.getBytes());
+        } catch (NoSuchAlgorithmException e) {
+            throw new RuntimeException("没有这个md5算法！");
+        }
+        String md5code = new BigInteger(1, secretBytes).toString(16);
+        for (int i = 0; i < 32 - md5code.length(); i++) {
+            md5code = "0" + md5code;
+        }
+        return md5code;
+    }
+
     @Override
     public final void onEnable() {
         // Plugin startup logic
         getServer().getPluginManager().registerEvents(this, this);
-        getServer().getPluginManager().registerEvents(new Login(),this);
-        RecipeCraft();
+        //RecipeCraft();
         getConfig().options().copyDefaults(true);
         saveConfig();
     }
+
+    /*
+    @EventHandler
+    public void OnWorldInit(WorldInitEvent event){
+        if ("world".equals(event.getWorld().getName())) {
+            event.getWorld().getPopulators().add(new TNTPopulator());
+        }
+    }
+     */
+
     @Override
     public final void onDisable() {
         // Plugin shutdown logic
@@ -50,6 +79,7 @@ public final class WnPlugin extends JavaPlugin implements Listener{
         saveConfig();
     }
 
+    /*
     private void RecipeCraft(){
         ItemStack rec = new ItemStack(Material.DIAMOND_ORE);
         ShapedRecipe recipe = new ShapedRecipe(Material.DIAMOND_ORE.getKey(),rec);
@@ -77,10 +107,34 @@ public final class WnPlugin extends JavaPlugin implements Listener{
 
         getServer().addRecipe(recipe);
     }
+    */
+
+    /*
+    private static class TNTPopulator extends BlockPopulator {
+
+        @Override
+        public void populate(World world, Random random, Chunk chunk) {
+            int amount = random.nextInt(30);
+            for (int i = 0; i < amount; i++) {
+                int x = random.nextInt(16);
+                int z = random.nextInt(16);
+                for (int y = 255; y >= 0; y--) {
+                    if (chunk.getBlock(x, y, z).getType() != Material.AIR) {
+                        if (chunk.getBlock(x, y, z).getType() == Material.GRASS_BLOCK
+                                && chunk.getBlock(x, y + 1, z).getType() == Material.AIR)
+                            chunk.getBlock(x, y + 1, z).setType(Material.TNT);
+                        break;
+                    }
+                }
+            }
+        }
+    }
+     */
 
     @EventHandler
     public final void onPlayerJoin(PlayerJoinEvent e){
         Player p = e.getPlayer();
+        login.remove(p);
         if(p.hasPlayedBefore()){
             e.setJoinMessage(ChatColor.YELLOW + p.getName() + "进入了服务器！");
         }
@@ -102,11 +156,18 @@ public final class WnPlugin extends JavaPlugin implements Listener{
         if(getConfig().get("player." + p.getName() + ".allow") != null && getConfig().getBoolean("fix." + "enable") && !getConfig().getBoolean("player." + p.getName() + ".allow")){
             BukkitTask kick = new KickPlayer(e.getPlayer(),2).runTaskLater(this, 10);
         }
+        if(getConfig().get("player." + p.getName() + ".password") == null){
+            p.sendMessage(ChatColor.GOLD + "请设置你的密码！/reg <密码> <确认密码>");
+        }
+        else{
+            p.sendMessage(ChatColor.GOLD + "请使用/login <密码>来登录！");
+        }
     }
 
     @EventHandler
     public final void onPlayerQuit(PlayerQuitEvent e){
         Player p = e.getPlayer();
+        login.remove(p);
         String name = e.getPlayer().getName();
         if(getConfig().getBoolean("fix." + "enable") && !name.equals(getConfig().get("fix." + "allow"))){
             e.setQuitMessage(ChatColor.YELLOW + "不在修复人员名单中的玩家"  + p.getName() + "在维修模式中尝试进入服务器！已自动踢出");
@@ -121,7 +182,7 @@ public final class WnPlugin extends JavaPlugin implements Listener{
 
     @EventHandler
     public void onPlayerRenameItem(PrepareAnvilEvent e){
-        if(e.getResult() != null && e.getResult().hasItemMeta() && e.getInventory().getRenameText() != "" && e.getInventory().getRenameText() != null){
+        if(e.getResult() != null && e.getResult().hasItemMeta() && !Objects.requireNonNull(e.getInventory().getRenameText()).equals("") && e.getInventory().getRenameText() != null){
             ItemStack result = e.getResult();
             ItemMeta im = result.getItemMeta();
             String colored = ChatColor.translateAlternateColorCodes('&', e.getInventory().getRenameText());
@@ -139,6 +200,11 @@ public final class WnPlugin extends JavaPlugin implements Listener{
     @EventHandler
     public void onPlayerGameModeChange(PlayerGameModeChangeEvent e){
         Player p = e.getPlayer();
+        if(!login.contains(p)){
+            e.setCancelled(true);
+            p.sendMessage(ChatColor.RED + "请先登录！");
+            return;
+        }
         if(e.getNewGameMode()!=GameMode.SURVIVAL) {
             if (!p.hasPermission("wnplugin.changegamemode")) {
                 e.setCancelled(true);
@@ -151,6 +217,12 @@ public final class WnPlugin extends JavaPlugin implements Listener{
     @EventHandler
     public void onBlockBreak(BlockBreakEvent e){
         String name = e.getPlayer().getName();
+        Player p = e.getPlayer();
+        if(!login.contains(p)){
+            e.setCancelled(true);
+            p.sendMessage(ChatColor.RED + "请先登录！");
+            return;
+        }
         if(getConfig().get("player." + name + ".nobreak") == null){
             getConfig().set("player." + name + ".nobreak",false);
         }
@@ -165,7 +237,15 @@ public final class WnPlugin extends JavaPlugin implements Listener{
 
     @EventHandler
     public void onBuildBlock(BlockCanBuildEvent e){
-        String name = e.getPlayer().getName();
+        Player p = e.getPlayer();
+        if(!login.contains(p)){
+            e.setBuildable(false);
+            if (p != null) {
+                p.sendMessage(ChatColor.RED + "请先登录！");
+            }
+            return;
+        }
+        String name = Objects.requireNonNull(e.getPlayer()).getName();
         if(getConfig().get("player." + name + ".build") == null){
             getConfig().set("player." + name + ".build",true);
         }
@@ -188,6 +268,10 @@ public final class WnPlugin extends JavaPlugin implements Listener{
 
     @Override
     public boolean onCommand(CommandSender sender,Command command,String label,String[] args){
+        if(!(sender instanceof Player)){
+            sender.sendMessage(ChatColor.RED + "控制台无法执行插件命令！");
+            return true;
+        }
         if("fixlist".equals(command.getName())){
             if(args.length != 2){
                 sender.sendMessage(ChatColor.RED + "参数错误！");
@@ -200,7 +284,7 @@ public final class WnPlugin extends JavaPlugin implements Listener{
                         saveConfig();
                         sender.sendMessage(ChatColor.GOLD + "设置成功！");
                         if(Bukkit.getPlayerExact(args[1]) != null){
-                            Bukkit.getPlayerExact(args[1]).sendMessage(ChatColor.RED + sender.getName() + ChatColor.GOLD + "将您加入了修复人员名单！");
+                            Objects.requireNonNull(Bukkit.getPlayerExact(args[1])).sendMessage(ChatColor.RED + sender.getName() + ChatColor.GOLD + "将您加入了修复人员名单！");
                         }
                         return true;
                     }
@@ -215,9 +299,9 @@ public final class WnPlugin extends JavaPlugin implements Listener{
                         saveConfig();
                         sender.sendMessage(ChatColor.GOLD + "设置成功！");
                         if(Bukkit.getPlayerExact(args[1]) != null){
-                            Bukkit.getPlayerExact(args[1]).sendMessage(ChatColor.RED + sender.getName() + ChatColor.GOLD + "将您移出了修复人员名单！");
+                            Objects.requireNonNull(Bukkit.getPlayerExact(args[1])).sendMessage(ChatColor.RED + sender.getName() + ChatColor.GOLD + "将您移出了修复人员名单！");
                             if(getConfig().getBoolean("fix.enable")){
-                                Bukkit.getPlayerExact(args[1]).kickPlayer(ChatColor.RED + "服务器进入维修模式，您不在修复人员名单内！");
+                                Objects.requireNonNull(Bukkit.getPlayerExact(args[1])).kickPlayer(ChatColor.RED + "服务器进入维修模式，您不在修复人员名单内！");
                             }
                         }
                         return true;
@@ -274,9 +358,9 @@ public final class WnPlugin extends JavaPlugin implements Listener{
                         getConfig().set("fix.enable",true);
                         saveConfig();
                         Player[] playerlist = Bukkit.getOnlinePlayers().toArray(new Player[0]);
-                        for(int i=0;i<playerlist.length;i++){
-                            if(!getConfig().getBoolean("player." + playerlist[i].getName() + ".allow")){
-                                playerlist[i].kickPlayer(ChatColor.RED + "服务器进入维修模式，您不在修复人员名单内！");
+                        for (Player player : playerlist) {
+                            if (!getConfig().getBoolean("player." + player.getName() + ".allow")) {
+                                player.kickPlayer(ChatColor.RED + "服务器进入维修模式，您不在修复人员名单内！");
                             }
                         }
                         sender.sendMessage(ChatColor.GOLD + "设置成功！");
@@ -328,14 +412,11 @@ public final class WnPlugin extends JavaPlugin implements Listener{
             }
         }
         else if("eco".equals(command.getName())){
-
+            sender.sendMessage(ChatColor.RED + "经济系统正在开发中，敬请期待！");
+            return true;
         }
         if(sender instanceof Player){
             Player p = (Player) sender;
-            if("hello".equals(command.getName())){
-                p.sendMessage(ChatColor.LIGHT_PURPLE + "你好呀," + p.getName() + ",欢迎来到我的服务器!qwq!");
-                return true;
-            }
             if("healself".equals(command.getName())){
                 p.setHealth(20);
                 p.sendMessage(ChatColor.GOLD + "治疗成功！");
@@ -655,6 +736,7 @@ public final class WnPlugin extends JavaPlugin implements Listener{
                     return false;
                 }
             }
+
             if("openinv".equals(command.getName())){
                 Inventory playerinv = Bukkit.createInventory(null,9,"§4随身背包");
                 playerinv.setItem(0,getConfig().getItemStack("inventory." + p.getName() + ".item1"));
@@ -697,14 +779,107 @@ public final class WnPlugin extends JavaPlugin implements Listener{
                     return true;
                 }
             }
-        }
-        else{
-            sender.sendMessage(ChatColor.RED + "这个指令只能由玩家执行!");
-            return true;
+            if("words".equals(command.getName())){
+                if(args.length != 2){
+                    sender.sendMessage(ChatColor.RED + "参数错误！");
+                    return false;
+                }
+                else{
+                    if("add".equals(args[0])){
+                        List<String> words;
+                        getConfig().getStringList("words");
+                        words = getConfig().getStringList("words");
+                        if(!words.contains(args[1])){
+                            words.add(args[1]);
+                            sender.sendMessage(ChatColor.GOLD + "添加关键词" + args[1] + "成功！");
+                            getConfig().set("words",words);
+                        }
+                        else{
+                            sender.sendMessage(ChatColor.RED + "已经存在此关键词！");
+                        }
+                        saveConfig();
+                        return true;
+                    }
+                    else if("del".equals(args[0])){
+                        List<String> words;
+                        getConfig().getStringList("words");
+                        words = getConfig().getStringList("words");
+                        if(words.contains(args[1])){
+                            words.remove(args[1]);
+                            sender.sendMessage(ChatColor.GOLD + "删除关键词" + args[1] + "成功！");
+                            getConfig().set("words",words);
+                        }
+                        else{
+                            sender.sendMessage(ChatColor.RED + "不存在此关键词！");
+                        }
+                        saveConfig();
+                        return true;
+                    }
+                    else{
+                        sender.sendMessage(ChatColor.RED + "参数错误！");
+                        return false;
+                    }
+                }
+            }
         }
         return false;
     }
 
+    @EventHandler
+    public void onPlayerChat(AsyncPlayerChatEvent e) {
+        if (getConfig().getBoolean("player." + e.getPlayer().getName() + ".mute")) {
+            e.setCancelled(true);
+            e.getPlayer().sendMessage(ChatColor.RED + "您已被禁言，请联系管理员解禁！");
+            return;
+        }
+        List<String> w;
+        if (getConfig().getList("words") == null) {
+            List<String> words = new ArrayList<>();
+            words.add("傻逼");
+            words.add("SB");
+            words.add("MMP");
+            words.add("妈卖批");
+            words.add("智障");
+            words.add("ZZ");
+            words.add("我日你妈");
+            words.add("RNM");
+            words.add("WDNMD");
+            words.add("WDNMB");
+            getConfig().set("words", words);
+            w = words;
+            saveConfig();
+        } else {
+            w = getConfig().getStringList("words");
+        }
+        for (String s : w) {
+            if (e.getMessage().toUpperCase().contains(s.toUpperCase())) {
+                e.setMessage(ChatColor.RED + "******");
+                e.getPlayer().sendMessage(ChatColor.RED + "请勿口吐芬芳！（触发关键词" + "\"" + s + "\"" + "）您已被自动永久禁言！");
+                getConfig().set("player." + e.getPlayer().getName() + ".mute", true);
+                saveConfig();
+                return;
+            }
+        }
+    }
+
+    /*
+    @EventHandler
+    public void onPlayerDropItem(PlayerDropItemEvent e){
+        Random random = new Random();
+        random.setSeed(280092384);
+        if(random.nextInt() % 10 == 0){
+            e.setCancelled(true);
+            e.getPlayer().sendMessage(ChatColor.RED + "欸，我就是不让你丢掉它");
+        }
+    }
+    */
+
+    /*
+    @EventHandler
+    public void onPlayerUseItem(PlayerInteractEvent e){
+
+    }
+    */
     @EventHandler
     public void onPlayerCloseInventory(InventoryCloseEvent e){
         String invtitle = e.getView().getTitle();
@@ -727,13 +902,9 @@ public final class WnPlugin extends JavaPlugin implements Listener{
     }
 
     @EventHandler
-    public void onPlayerOpenInventory(InventoryOpenEvent e){
-        //e.setCancelled(true);
-    }
-
-    @EventHandler
     public void onEntityDamage(EntityDamageEvent e){
         if(e.getEntity().getType() == EntityType.PLAYER){
+            Player p = (Player)e.getEntity();
             if(getConfig().getBoolean("player." + e.getEntity().getName() + ".godmode")){
                 e.setCancelled(true);
                 //e.getEntity().sendMessage(ChatColor.GOLD + "已为您抵挡" + ChatColor.RED + e.getDamage() + ChatColor.GOLD + "点伤害！");
@@ -744,8 +915,8 @@ public final class WnPlugin extends JavaPlugin implements Listener{
     @EventHandler
     public void onPlayerFoodLevelChange(FoodLevelChangeEvent e) {
         if(e.getEntity().getType() == EntityType.PLAYER){
+            Player p = (Player)e.getEntity();
             if(getConfig().getBoolean("player." + e.getEntity().getName() + ".godmode")){
-                Player p = (Player) e.getEntity();
                 if(p.getFoodLevel() != 20){
                     p.setFoodLevel(20);
                     e.setCancelled(true);

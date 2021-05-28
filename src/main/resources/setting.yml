@@ -1,0 +1,25 @@
+main-coin: points
+coins:
+  points:
+    name: "点卷"
+    description: "我只是普普通通的点卷啦qwq"
+    value: 1
+    exchange:
+      in: true
+      out: true
+      tax: 0
+    transfer:
+      allow: true
+      tax: 0.1
+  crystal:
+    name: "水晶"
+    description: "我只是普普通通的水晶啦qwq"
+    value: 20
+    max: 100
+    exchange:
+      in: true
+      out: false
+      tax: 0.5
+    transfer:
+      allow: false
+      tax: 0

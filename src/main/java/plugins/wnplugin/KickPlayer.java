@@ -21,6 +21,9 @@ public class KickPlayer extends BukkitRunnable{
         else if(mode == 2){
             p.kickPlayer(ChatColor.RED + "服务器进入维修模式，您不在修复人员名单内！");
         }
+        else if(mode == 3){
+            p.kickPlayer(ChatColor.RED + "因您密码输入错误，被自动踢出！");
+        }
         else{
             p.kickPlayer(ChatColor.RED + "您已被踢出服务器！Code:" + mode);
         }
