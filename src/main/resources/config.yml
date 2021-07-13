@@ -1,0 +1,14 @@
+message:
+  hint: "&2你还未登录，无法使用此功能！"
+  success-login: "&7登陆成功！亲爱的冒险家！"
+  success-register: "&7注册成功！欢迎你加入我们的服务器！"
+  need-login: "&2请使用 /login <密码> 以登录！"
+  need-register: "&2请使用 /reg <密码> <重复一遍密码> 以注册！"
+  wrong-password: "&2密码错误！"
+  not-same: "&2两次密码输入不符！"
+  is-register: "&2你已经注册过了！"
+security:
+  #散列算法，可选用MD5,SHA1,SHA256,请不要随意切换，切换后请清除所有人的密码，否则会导致散列值错误无法登录
+  algorithm: "MD5"
+  #密码盐，此串文本用于加密哈希，防止哈希碰撞得出密码，尽量选用长文本
+  salt: "qhxofahxmzoadiwqeyunfa"

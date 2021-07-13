@@ -3,12 +3,9 @@ package plugins.wnplugin;
 import org.bukkit.*;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
-import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
-import org.bukkit.event.Cancellable;
 import org.bukkit.event.EventHandler;
-import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockCanBuildEvent;
@@ -17,41 +14,34 @@ import org.bukkit.event.entity.FoodLevelChangeEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.event.inventory.InventoryOpenEvent;
 import org.bukkit.event.inventory.PrepareAnvilEvent;
-import org.bukkit.event.player.*;
+import org.bukkit.event.player.AsyncPlayerChatEvent;
+import org.bukkit.event.player.PlayerGameModeChangeEvent;
+import org.bukkit.event.player.PlayerJoinEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitTask;
 
-import java.math.BigInteger;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
+import java.io.File;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Objects;
 
 public final class WnPlugin extends JavaPlugin implements Listener{
-    YamlConfiguration file;
     HashMap<Player,Player> sendTrade = new HashMap<>();
-    public static List<Player> login = new ArrayList<>();
+    public static List<String> Login = new ArrayList<>();
     String Prefix = "[WnPlugin]";
     //Inventory anvil = Bukkit.createInventory(null,InventoryType.ANVIL,"§2Anvil");
 
-    public static String stringToMD5(String plainText) {
-        byte[] secretBytes;
-        try {
-            secretBytes = MessageDigest.getInstance("md5").digest(
-                    plainText.getBytes());
-        } catch (NoSuchAlgorithmException e) {
-            throw new RuntimeException("没有这个md5算法！");
-        }
-        String md5code = new BigInteger(1, secretBytes).toString(16);
-        for (int i = 0; i < 32 - md5code.length(); i++) {
-            md5code = "0" + md5code;
-        }
-        return md5code;
+    private static String getColoredText(String text){
+        return ChatColor.translateAlternateColorCodes('&', text);
+    }
+
+    private static boolean judgePlayer(Player p){
+        return Login.contains(p.getName());
     }
 
     @Override
@@ -59,6 +49,11 @@ public final class WnPlugin extends JavaPlugin implements Listener{
         // Plugin startup logic
         getServer().getPluginManager().registerEvents(this, this);
         //RecipeCraft();
+        File t = new File(getDataFolder(),"config.yml");
+        if(!t.exists()){
+            saveDefaultConfig();
+            getLogger().info("SaveDefaultConfig!");
+        }
         getConfig().options().copyDefaults(true);
         saveConfig();
     }
@@ -134,9 +129,14 @@ public final class WnPlugin extends JavaPlugin implements Listener{
     @EventHandler
     public final void onPlayerJoin(PlayerJoinEvent e){
         Player p = e.getPlayer();
-        login.remove(p);
+        String name = e.getPlayer().getName();
         if(p.hasPlayedBefore()){
-            e.setJoinMessage(ChatColor.YELLOW + p.getName() + "进入了服务器！");
+           if(p.isOp()){
+               e.setJoinMessage(ChatColor.YELLOW + "管理员" + ChatColor.RED + p.getName() + ChatColor.YELLOW + "进入了服务器！");
+           }
+           else{
+               e.setJoinMessage(ChatColor.YELLOW + p.getName() + "进入了服务器！");
+           }
         }
         else {
             e.setJoinMessage(ChatColor.YELLOW + "欢迎萌新" + p.getName() + "进入服务器！");
@@ -145,29 +145,30 @@ public final class WnPlugin extends JavaPlugin implements Listener{
             ItemStack sword = new ItemStack(Material.WOODEN_SWORD,1);
             p.getInventory().addItem(food,sword);
         }
-        String name = e.getPlayer().getName();
         if(getConfig().getInt("player." + name + ".try") > 5){
-            BukkitTask kick = new KickPlayer(e.getPlayer(),1).runTaskLater(this, 10);
+            BukkitTask kick = new KickPlayer(e.getPlayer(),1,this).runTaskLater(this, 10);
             return;
         }
         if(getConfig().get("player." + p.getName() + ".allow") == null){
             getConfig().set("player." + p.getName() + ".allow",false);
+            saveConfig();
         }
         if(getConfig().get("player." + p.getName() + ".allow") != null && getConfig().getBoolean("fix." + "enable") && !getConfig().getBoolean("player." + p.getName() + ".allow")){
-            BukkitTask kick = new KickPlayer(e.getPlayer(),2).runTaskLater(this, 10);
+            BukkitTask kick = new KickPlayer(e.getPlayer(),2,this).runTaskLater(this, 10);
         }
-        if(getConfig().get("player." + p.getName() + ".password") == null){
-            p.sendMessage(ChatColor.GOLD + "请设置你的密码！/reg <密码> <确认密码>");
+        saveConfig();
+        if(getConfig().getString("player." + p.getName() + ".password")==null){
+            p.sendMessage(getColoredText(getConfig().getString("message.need-register")));
         }
         else{
-            p.sendMessage(ChatColor.GOLD + "请使用/login <密码>来登录！");
+            p.sendMessage(getColoredText(getConfig().getString("message.need-login")));
         }
     }
 
     @EventHandler
     public final void onPlayerQuit(PlayerQuitEvent e){
+        Login.remove(e.getPlayer().getName());
         Player p = e.getPlayer();
-        login.remove(p);
         String name = e.getPlayer().getName();
         if(getConfig().getBoolean("fix." + "enable") && !name.equals(getConfig().get("fix." + "allow"))){
             e.setQuitMessage(ChatColor.YELLOW + "不在修复人员名单中的玩家"  + p.getName() + "在维修模式中尝试进入服务器！已自动踢出");
@@ -200,11 +201,6 @@ public final class WnPlugin extends JavaPlugin implements Listener{
     @EventHandler
     public void onPlayerGameModeChange(PlayerGameModeChangeEvent e){
         Player p = e.getPlayer();
-        if(!login.contains(p)){
-            e.setCancelled(true);
-            p.sendMessage(ChatColor.RED + "请先登录！");
-            return;
-        }
         if(e.getNewGameMode()!=GameMode.SURVIVAL) {
             if (!p.hasPermission("wnplugin.changegamemode")) {
                 e.setCancelled(true);
@@ -218,10 +214,9 @@ public final class WnPlugin extends JavaPlugin implements Listener{
     public void onBlockBreak(BlockBreakEvent e){
         String name = e.getPlayer().getName();
         Player p = e.getPlayer();
-        if(!login.contains(p)){
+        if(!judgePlayer(p)){
             e.setCancelled(true);
-            p.sendMessage(ChatColor.RED + "请先登录！");
-            return;
+            p.sendMessage(getColoredText(getConfig().getString("message.hint")));
         }
         if(getConfig().get("player." + name + ".nobreak") == null){
             getConfig().set("player." + name + ".nobreak",false);
@@ -238,13 +233,6 @@ public final class WnPlugin extends JavaPlugin implements Listener{
     @EventHandler
     public void onBuildBlock(BlockCanBuildEvent e){
         Player p = e.getPlayer();
-        if(!login.contains(p)){
-            e.setBuildable(false);
-            if (p != null) {
-                p.sendMessage(ChatColor.RED + "请先登录！");
-            }
-            return;
-        }
         String name = Objects.requireNonNull(e.getPlayer()).getName();
         if(getConfig().get("player." + name + ".build") == null){
             getConfig().set("player." + name + ".build",true);
@@ -266,8 +254,20 @@ public final class WnPlugin extends JavaPlugin implements Listener{
         }
     }
 
+    @EventHandler
+    public void onPlayerOpenInventory(InventoryOpenEvent e){
+        Player p = (Player) e.getPlayer();
+
+    }
+
     @Override
     public boolean onCommand(CommandSender sender,Command command,String label,String[] args){
+        if(!judgePlayer((Player) sender)){
+            if((!("login".equals(command.getName())))&&(!("reg".equals(command.getName())))&&(!("password".equals(command.getName())))){
+                sender.sendMessage(getColoredText(getConfig().getString("message.hint")));
+                return true;
+            }
+        }
         if(!(sender instanceof Player)){
             sender.sendMessage(ChatColor.RED + "控制台无法执行插件命令！");
             return true;
@@ -415,139 +415,165 @@ public final class WnPlugin extends JavaPlugin implements Listener{
             sender.sendMessage(ChatColor.RED + "经济系统正在开发中，敬请期待！");
             return true;
         }
-        if(sender instanceof Player){
-            Player p = (Player) sender;
-            if("healself".equals(command.getName())){
-                p.setHealth(20);
-                p.sendMessage(ChatColor.GOLD + "治疗成功！");
-                getLogger().info(ChatColor.BLUE + p.getName()+"治疗了自己！");
-                return true;
+        Player p = (Player) sender;
+        if("healself".equals(command.getName())){
+            p.setHealth(20);
+            p.sendMessage(ChatColor.GOLD + "治疗成功！");
+            getLogger().info(ChatColor.BLUE + p.getName()+"治疗了自己！");
+            return true;
+        }
+        if("setlevel".equals(command.getName())){
+            if(args.length < 1 || args.length > 2){
+                p.sendMessage(ChatColor.RED + "参数错误！");
+                return false;
             }
-            if("setlevel".equals(command.getName())){
-                if(args.length < 1 || args.length > 2){
-                    p.sendMessage(ChatColor.RED + "参数错误！");
+            else{
+                int num;
+                try {
+                    num = Integer.parseInt(args[0]);
+                } catch (NumberFormatException e) {
+                    p.sendMessage(ChatColor.RED + "参数错误，期望int，却得到String");
                     return false;
                 }
+                if(args.length == 1){
+                    p.setLevel(num);
+                    p.sendMessage(ChatColor.GOLD + "设置成功！");
+                    return true;
+                }
                 else{
-                    int num;
-                    try {
-                        num = Integer.parseInt(args[0]);
-                    } catch (NumberFormatException e) {
-                        p.sendMessage(ChatColor.RED + "参数错误，期望int，却得到String");
-                        return false;
-                    }
-                    if(args.length == 1){
-                        p.setLevel(num);
+                    Player target = Bukkit.getPlayerExact(args[1]);
+                    if (target != null) {
+                        target.setLevel(num);
                         p.sendMessage(ChatColor.GOLD + "设置成功！");
                         return true;
                     }
                     else{
-                        Player target = Bukkit.getPlayerExact(args[1]);
-                        if (target != null) {
-                            target.setLevel(num);
-                            p.sendMessage(ChatColor.GOLD + "设置成功！");
-                            return true;
-                        }
-                        else{
-                            getLogger().info(ChatColor.RED + "Target is Null！");
-                        }
+                        getLogger().info(ChatColor.RED + "Target is Null！");
                     }
                 }
             }
-            if("setexp".equals(command.getName())){
-                if(args.length < 1 || args.length > 2){
-                    p.sendMessage(ChatColor.RED + "参数错误！");
-                    return false;
-                }
-                else{
-                    float num;
-                    try{
-                        num = Float.parseFloat(args[0]);
-                    }catch(NumberFormatException e){
-                        p.sendMessage(ChatColor.RED + "参数错误，期望float，却得到String");
-                        return false;
-                    }
-                    if (args.length == 1){
-                        if(num < 0 || num > 100){
-                            p.sendMessage(ChatColor.RED + "参数错误，期望一个介于0.0F和100.0F间的float");
-                            return true;
-                        }
-                        else{
-                            num = num / 100.0F;
-                            p.setExp(num);
-                            p.sendMessage(ChatColor.GOLD + "设置成功！");
-                            return true;
-                        }
-                    }
-                    else{
-                        if(num < 0 || num > 100){
-                            p.sendMessage(ChatColor.RED + "参数错误，期望一个介于0.0F和100.0F间的float");
-                            return true;
-                        }
-                        else{
-                            num = num / 100.0F;
-                            Player target = Bukkit.getPlayerExact(args[1]);
-                            if (target != null) {
-                                target.setExp(num);
-                                p.sendMessage(ChatColor.GOLD + "设置成功！");
-                                return true;
-                            }
-                            else{
-                                getLogger().info(ChatColor.RED + "Target is Null！");
-                                p.sendMessage(ChatColor.RED + "设置失败！可能是因为玩家不在线，导致target为Null！");
-                                return true;
-                            }
-                        }
-                    }
-                }
+        }
+        if("setexp".equals(command.getName())){
+            if(args.length < 1 || args.length > 2){
+                p.sendMessage(ChatColor.RED + "参数错误！");
+                return false;
             }
-            if("cleanplayer".equals(command.getName())){
-                if(args.length > 1){
-                    p.sendMessage(ChatColor.RED + "参数错误！");
+            else{
+                float num;
+                try{
+                    num = Float.parseFloat(args[0]);
+                }catch(NumberFormatException e){
+                    p.sendMessage(ChatColor.RED + "参数错误，期望float，却得到String");
                     return false;
                 }
-                else{
-                    if(args.length == 0 || p.getName().equals(args[0])){
-                        p.getInventory().clear();
-                        p.sendMessage(ChatColor.GOLD + "已经清除您的背包！");
+                if (args.length == 1){
+                    if(num < 0 || num > 100){
+                        p.sendMessage(ChatColor.RED + "参数错误，期望一个介于0.0F和100.0F间的float");
                         return true;
                     }
                     else{
-                        Player target = Bukkit.getPlayerExact(args[0]);
-                        if(target != null){
-                            target.getInventory().clear();
-                            p.sendMessage(ChatColor.GOLD + "已经清除" + ChatColor.RED + target.getName() + ChatColor.GOLD + "的背包！");
-                            target.sendMessage(ChatColor.GOLD + "您被" + ChatColor.RED + p.getName() + ChatColor.GOLD + "清除了背包！");
+                        num = num / 100.0F;
+                        p.setExp(num);
+                        p.sendMessage(ChatColor.GOLD + "设置成功！");
+                        return true;
+                    }
+                }
+                else{
+                    if(num < 0 || num > 100){
+                        p.sendMessage(ChatColor.RED + "参数错误，期望一个介于0.0F和100.0F间的float");
+                        return true;
+                    }
+                    else{
+                        num = num / 100.0F;
+                        Player target = Bukkit.getPlayerExact(args[1]);
+                        if (target != null) {
+                            target.setExp(num);
+                            p.sendMessage(ChatColor.GOLD + "设置成功！");
                             return true;
                         }
                         else{
                             getLogger().info(ChatColor.RED + "Target is Null！");
-                            p.sendMessage(ChatColor.RED + "清除失败！可能是因为玩家不在线，导致target为Null！");
+                            p.sendMessage(ChatColor.RED + "设置失败！可能是因为玩家不在线，导致target为Null！");
                             return true;
                         }
                     }
                 }
             }
-            if("trade".equals(command.getName())){
-                if(args.length == 1){
-                    if("accept".equals(args[0])){
+        }
+        if("cleanplayer".equals(command.getName())){
+            if(args.length > 1){
+                p.sendMessage(ChatColor.RED + "参数错误！");
+                return false;
+            }
+            else{
+                if(args.length == 0 || p.getName().equals(args[0])){
+                    p.getInventory().clear();
+                    p.sendMessage(ChatColor.GOLD + "已经清除您的背包！");
+                    return true;
+                }
+                else{
+                    Player target = Bukkit.getPlayerExact(args[0]);
+                    if(target != null){
+                        target.getInventory().clear();
+                        p.sendMessage(ChatColor.GOLD + "已经清除" + ChatColor.RED + target.getName() + ChatColor.GOLD + "的背包！");
+                        target.sendMessage(ChatColor.GOLD + "您被" + ChatColor.RED + p.getName() + ChatColor.GOLD + "清除了背包！");
+                        return true;
+                    }
+                    else{
+                        getLogger().info(ChatColor.RED + "Target is Null！");
+                        p.sendMessage(ChatColor.RED + "清除失败！可能是因为玩家不在线，导致target为Null！");
+                        return true;
+                    }
+                }
+            }
+        }
+        if("trade".equals(command.getName())){
+            if(args.length == 1){
+                if("accept".equals(args[0])){
+                    if(sendTrade.containsKey(p)){
+                        Player target = sendTrade.get(p);
+                        if(target != null){
+                            if(Bukkit.getOnlinePlayers().contains(target)){
+                                Inventory tradeinv = Bukkit.createInventory(null,54,"§2交易面板");
+                                target.sendMessage(ChatColor.RED + p.getName() + ChatColor.GOLD + "同意了您的交易请求！");
+                                p.sendMessage(ChatColor.GOLD + "您同意了" + ChatColor.RED + p.getName() + ChatColor.GOLD + "的交易请求！");
+                                p.closeInventory();
+                                p.openInventory(tradeinv);
+                                target.closeInventory();
+                                target.openInventory(tradeinv);
+                                sendTrade.remove(p);
+                                return true;
+                            }
+                            else{
+                                p.sendMessage(ChatColor.RED + "目标(target)不在线！已经移除此请求！");
+                                sendTrade.remove(p);
+                                return true;
+                            }
+                        }
+                        else{
+                            p.sendMessage(ChatColor.RED + "目标(target)不是玩家或不在线！");
+                            return true;
+                        }
+                    }
+                    else{
+                        p.sendMessage(ChatColor.RED + "没有找到符合条件的请求！");
+                        return true;
+                    }
+                }
+                else{
+                    if("deny".equals(args[0])){
                         if(sendTrade.containsKey(p)){
                             Player target = sendTrade.get(p);
                             if(target != null){
                                 if(Bukkit.getOnlinePlayers().contains(target)){
-                                    Inventory tradeinv = Bukkit.createInventory(null,54,"§2交易面板");
-                                    target.sendMessage(ChatColor.RED + p.getName() + ChatColor.GOLD + "同意了您的交易请求！");
-                                    p.sendMessage(ChatColor.GOLD + "您同意了" + ChatColor.RED + p.getName() + ChatColor.GOLD + "的交易请求！");
-                                    p.closeInventory();
-                                    p.openInventory(tradeinv);
-                                    target.closeInventory();
-                                    target.openInventory(tradeinv);
                                     sendTrade.remove(p);
+                                    p.sendMessage(ChatColor.GOLD + "成功拒绝了" + ChatColor.RED + target.getName() + ChatColor.GOLD + "的交易请求！");
+                                    target.sendMessage(ChatColor.RED + "您的交易请求被拒绝！");
                                     return true;
                                 }
                                 else{
-                                    p.sendMessage(ChatColor.RED + "目标(target)不在线！已经移除此请求！");
                                     sendTrade.remove(p);
+                                    p.sendMessage(ChatColor.RED + "目标(target)不在线！已经移除此请求！");
                                     return true;
                                 }
                             }
@@ -562,115 +588,35 @@ public final class WnPlugin extends JavaPlugin implements Listener{
                         }
                     }
                     else{
-                        if("deny".equals(args[0])){
-                            if(sendTrade.containsKey(p)){
-                                Player target = sendTrade.get(p);
-                                if(target != null){
-                                    if(Bukkit.getOnlinePlayers().contains(target)){
-                                        sendTrade.remove(p);
-                                        p.sendMessage(ChatColor.GOLD + "成功拒绝了" + ChatColor.RED + target.getName() + ChatColor.GOLD + "的交易请求！");
-                                        target.sendMessage(ChatColor.RED + "您的交易请求被拒绝！");
-                                        return true;
-                                    }
-                                    else{
-                                        sendTrade.remove(p);
-                                        p.sendMessage(ChatColor.RED + "目标(target)不在线！已经移除此请求！");
-                                        return true;
-                                    }
-                                }
-                                else{
-                                    p.sendMessage(ChatColor.RED + "目标(target)不是玩家或不在线！");
-                                    return true;
-                                }
+                        p.sendMessage(ChatColor.RED + "参数错误！");
+                        return false;
+                    }
+                }
+            }
+            if(args.length == 2){
+                if("send".equals(args[0])){
+                    Player target = Bukkit.getPlayerExact(args[1]);
+                    if (target != null) {
+                        if(Bukkit.getOnlinePlayers().contains(target)){
+                            if(sendTrade.containsKey(target)){
+                                p.sendMessage(ChatColor.RED + "对方存在来自" + ChatColor.GOLD + sendTrade.get(target).getName() + ChatColor.RED + "的交易请求，无法发送！");
+                                return true;
                             }
                             else{
-                                p.sendMessage(ChatColor.RED + "没有找到符合条件的请求！");
+                                sendTrade.put(target,p);
+                                p.sendMessage(ChatColor.GOLD + "您已发送交易请求至" + ChatColor.RED + target.getName());
+                                target.sendMessage(ChatColor.RED + p.getName() + ChatColor.GOLD + "向您发送了交易请求，发送/trade accept以同意，发送/trade deny以拒绝");
                                 return true;
                             }
                         }
                         else{
-                            p.sendMessage(ChatColor.RED + "参数错误！");
-                            return false;
+                            p.sendMessage(ChatColor.RED + "目标(target)不在线！");
                         }
-                    }
-                }
-                if(args.length == 2){
-                    if("send".equals(args[0])){
-                        Player target = Bukkit.getPlayerExact(args[1]);
-                        if (target != null) {
-                            if(Bukkit.getOnlinePlayers().contains(target)){
-                                if(sendTrade.containsKey(target)){
-                                    p.sendMessage(ChatColor.RED + "对方存在来自" + ChatColor.GOLD + sendTrade.get(target).getName() + ChatColor.RED + "的交易请求，无法发送！");
-                                    return true;
-                                }
-                                else{
-                                    sendTrade.put(target,p);
-                                    p.sendMessage(ChatColor.GOLD + "您已发送交易请求至" + ChatColor.RED + target.getName());
-                                    target.sendMessage(ChatColor.RED + p.getName() + ChatColor.GOLD + "向您发送了交易请求，发送/trade accept以同意，发送/trade deny以拒绝");
-                                    return true;
-                                }
-                            }
-                            else{
-                                p.sendMessage(ChatColor.RED + "目标(target)不在线！");
-                            }
-                            return true;
-                        }
-                        else{
-                            p.sendMessage(ChatColor.RED + "发送失败！可能是玩家不在线，导致target为Null！");
-                            return true;
-                        }
+                        return true;
                     }
                     else{
-                        p.sendMessage(ChatColor.RED + "参数错误！");
-                        return false;
-                    }
-                }
-            }
-            if("nobreak".equals(command.getName())){
-                if(args.length == 1){
-                    if("enable".equals(args[0])){
-                        getConfig().set("player." + p.getName() + "." + "nobreak",true);
-                        saveConfig();
-                        p.sendMessage(ChatColor.GOLD + "已禁用您的挖掘能力！");
-                    }
-                    else if("disable".equals(args[0])){
-                        getConfig().set("player." + p.getName() + "." + "nobreak",false);
-                        saveConfig();
-                        p.sendMessage(ChatColor.GOLD + "已启用您的挖掘能力！");
-                    }
-                    else{
-                        p.sendMessage(ChatColor.RED + "参数错误！");
-                        return false;
-                    }
-                    return true;
-                }
-                else if(args.length == 2){
-                    Player target = Bukkit.getPlayerExact(args[1]);
-                    if("enable".equals(args[0])){
-                        if(target != null){
-                            getConfig().set("player." + target.getName() + "." + "nobreak",true);
-                            saveConfig();
-                            target.sendMessage(ChatColor.RED + "您的挖掘能力被" + ChatColor.GOLD + p.getName() + ChatColor.RED + "禁用！");
-                            return true;
-                        }
-                        else{
-                            p.sendMessage(ChatColor.RED + "设置失败！可能是因为玩家不在线，导致target为Null！");
-                            getLogger().info(ChatColor.RED + "target is Null！");
-                            return true;
-                        }
-                    }
-                    if("disable".equals(args[0])){
-                        if(target != null){
-                            getConfig().set("player." + target.getName() + "." + "nobreak",false);
-                            saveConfig();
-                            target.sendMessage(ChatColor.GOLD + "您的挖掘能力被" + ChatColor.RED + p.getName() + ChatColor.GOLD + "启用！");
-                            return true;
-                        }
-                        else{
-                            p.sendMessage(ChatColor.RED + "设置失败！可能是因为玩家不在线，导致target为Null！");
-                            getLogger().info(ChatColor.RED + "target is Null！");
-                            return true;
-                        }
+                        p.sendMessage(ChatColor.RED + "发送失败！可能是玩家不在线，导致target为Null！");
+                        return true;
                     }
                 }
                 else{
@@ -678,57 +624,105 @@ public final class WnPlugin extends JavaPlugin implements Listener{
                     return false;
                 }
             }
-            if("setbuild".equals(command.getName())){
-                if(args.length == 1){
-                    if("disable".equals(args[0])){
-                        getConfig().set("player." + p.getName() + "." + "build",false);
-                        saveConfig();
-                        p.sendMessage(ChatColor.GOLD + "已禁用您的放置能力！");
-                    }
-                    else if("enable".equals(args[0])){
-                        getConfig().set("player." + p.getName() + "." + "build",true);
-                        saveConfig();
-                        p.sendMessage(ChatColor.GOLD + "已启用您的放置能力！");
-                    }
-                    else{
-                        p.sendMessage(ChatColor.RED + "参数错误！");
-                        return false;
-                    }
-                    return true;
+        }
+        if("nobreak".equals(command.getName())){
+            if(args.length == 1){
+                if("enable".equals(args[0])){
+                    getConfig().set("player." + p.getName() + "." + "nobreak",true);
+                    saveConfig();
+                    p.sendMessage(ChatColor.GOLD + "已禁用您的挖掘能力！");
                 }
-                else if(args.length == 2){
-                    Player target = Bukkit.getPlayerExact(args[1]);
-                    if("disable".equals(args[0])){
-                        if(target != null){
-                            getConfig().set("player." + target.getName() + "." + "build",false);
-                            saveConfig();
-                            p.sendMessage(ChatColor.GOLD + "已禁用" + ChatColor.RED + target.getName() + ChatColor.GOLD + "的放置能力！");
-                            target.sendMessage(ChatColor.RED + "您的放置能力被" + ChatColor.GOLD + p.getName() + ChatColor.RED + "禁用！");
-                            return true;
-                        }
-                        else{
-                            p.sendMessage(ChatColor.RED + "设置失败！可能是因为玩家不在线，导致target为Null！");
-                            getLogger().info(ChatColor.RED + "target is Null！");
-                            return true;
-                        }
-                    }
-                    else if("enable".equals(args[0])){
-                        if(target != null){
-                            getConfig().set("player." + target.getName() + "." + "build",true);
-                            saveConfig();
-                            p.sendMessage(ChatColor.GOLD + "已启用" + ChatColor.RED + target.getName() + ChatColor.GOLD + "的放置能力！");
-                            target.sendMessage(ChatColor.GOLD + "您的放置能力被" + ChatColor.RED + p.getName() + ChatColor.GOLD + "启用！");
-                            return true;
-                        }
-                        else{
-                            p.sendMessage(ChatColor.RED + "设置失败！可能是因为玩家不在线，导致target为Null！");
-                            getLogger().info(ChatColor.RED + "target is Null！");
-                            return true;
-                        }
+                else if("disable".equals(args[0])){
+                    getConfig().set("player." + p.getName() + "." + "nobreak",false);
+                    saveConfig();
+                    p.sendMessage(ChatColor.GOLD + "已启用您的挖掘能力！");
+                }
+                else{
+                    p.sendMessage(ChatColor.RED + "参数错误！");
+                    return false;
+                }
+                return true;
+            }
+            else if(args.length == 2){
+                Player target = Bukkit.getPlayerExact(args[1]);
+                if("enable".equals(args[0])){
+                    if(target != null){
+                        getConfig().set("player." + target.getName() + "." + "nobreak",true);
+                        saveConfig();
+                        target.sendMessage(ChatColor.RED + "您的挖掘能力被" + ChatColor.GOLD + p.getName() + ChatColor.RED + "禁用！");
+                        return true;
                     }
                     else{
-                        p.sendMessage(ChatColor.RED + "参数错误！");
-                        return false;
+                        p.sendMessage(ChatColor.RED + "设置失败！可能是因为玩家不在线，导致target为Null！");
+                        getLogger().info(ChatColor.RED + "target is Null！");
+                        return true;
+                    }
+                }
+                if("disable".equals(args[0])){
+                    if(target != null){
+                        getConfig().set("player." + target.getName() + "." + "nobreak",false);
+                        saveConfig();
+                        target.sendMessage(ChatColor.GOLD + "您的挖掘能力被" + ChatColor.RED + p.getName() + ChatColor.GOLD + "启用！");
+                        return true;
+                    }
+                    else{
+                        p.sendMessage(ChatColor.RED + "设置失败！可能是因为玩家不在线，导致target为Null！");
+                        getLogger().info(ChatColor.RED + "target is Null！");
+                        return true;
+                    }
+                }
+            }
+            else{
+                p.sendMessage(ChatColor.RED + "参数错误！");
+                return false;
+            }
+        }
+        if("setbuild".equals(command.getName())){
+            if(args.length == 1){
+                if("disable".equals(args[0])){
+                    getConfig().set("player." + p.getName() + "." + "build",false);
+                    saveConfig();
+                    p.sendMessage(ChatColor.GOLD + "已禁用您的放置能力！");
+                }
+                else if("enable".equals(args[0])){
+                    getConfig().set("player." + p.getName() + "." + "build",true);
+                    saveConfig();
+                    p.sendMessage(ChatColor.GOLD + "已启用您的放置能力！");
+                }
+                else{
+                    p.sendMessage(ChatColor.RED + "参数错误！");
+                    return false;
+                }
+                return true;
+            }
+            else if(args.length == 2){
+                Player target = Bukkit.getPlayerExact(args[1]);
+                if("disable".equals(args[0])){
+                    if(target != null){
+                        getConfig().set("player." + target.getName() + "." + "build",false);
+                        saveConfig();
+                        p.sendMessage(ChatColor.GOLD + "已禁用" + ChatColor.RED + target.getName() + ChatColor.GOLD + "的放置能力！");
+                        target.sendMessage(ChatColor.RED + "您的放置能力被" + ChatColor.GOLD + p.getName() + ChatColor.RED + "禁用！");
+                        return true;
+                    }
+                    else{
+                        p.sendMessage(ChatColor.RED + "设置失败！可能是因为玩家不在线，导致target为Null！");
+                        getLogger().info(ChatColor.RED + "target is Null！");
+                        return true;
+                    }
+                }
+                else if("enable".equals(args[0])){
+                    if(target != null){
+                        getConfig().set("player." + target.getName() + "." + "build",true);
+                        saveConfig();
+                        p.sendMessage(ChatColor.GOLD + "已启用" + ChatColor.RED + target.getName() + ChatColor.GOLD + "的放置能力！");
+                        target.sendMessage(ChatColor.GOLD + "您的放置能力被" + ChatColor.RED + p.getName() + ChatColor.GOLD + "启用！");
+                        return true;
+                    }
+                    else{
+                        p.sendMessage(ChatColor.RED + "设置失败！可能是因为玩家不在线，导致target为Null！");
+                        getLogger().info(ChatColor.RED + "target is Null！");
+                        return true;
                     }
                 }
                 else{
@@ -736,91 +730,208 @@ public final class WnPlugin extends JavaPlugin implements Listener{
                     return false;
                 }
             }
-
-            if("openinv".equals(command.getName())){
-                Inventory playerinv = Bukkit.createInventory(null,9,"§4随身背包");
-                playerinv.setItem(0,getConfig().getItemStack("inventory." + p.getName() + ".item1"));
-                playerinv.setItem(1,getConfig().getItemStack("inventory." + p.getName() + ".item2"));
-                playerinv.setItem(2,getConfig().getItemStack("inventory." + p.getName() + ".item3"));
-                playerinv.setItem(3,getConfig().getItemStack("inventory." + p.getName() + ".item4"));
-                playerinv.setItem(4,getConfig().getItemStack("inventory." + p.getName() + ".item5"));
-                playerinv.setItem(5,getConfig().getItemStack("inventory." + p.getName() + ".item6"));
-                playerinv.setItem(6,getConfig().getItemStack("inventory." + p.getName() + ".item7"));
-                playerinv.setItem(7,getConfig().getItemStack("inventory." + p.getName() + ".item8"));
-                playerinv.setItem(8,getConfig().getItemStack("inventory." + p.getName() + ".item9"));
-                p.openInventory(playerinv);
-                return true;
+            else{
+                p.sendMessage(ChatColor.RED + "参数错误！");
+                return false;
             }
-            if("discard".equals(command.getName())){
-                Inventory discardinv = Bukkit.createInventory(null,54,"§b垃圾桶");
-                p.closeInventory();
-                p.openInventory(discardinv);
-                return true;
+        }
+        if("openinv".equals(command.getName())){
+            Inventory playerinv = Bukkit.createInventory(null,9,"§4随身背包");
+            playerinv.setItem(0,getConfig().getItemStack("inventory." + p.getName() + ".item1"));
+            playerinv.setItem(1,getConfig().getItemStack("inventory." + p.getName() + ".item2"));
+            playerinv.setItem(2,getConfig().getItemStack("inventory." + p.getName() + ".item3"));
+            playerinv.setItem(3,getConfig().getItemStack("inventory." + p.getName() + ".item4"));
+            playerinv.setItem(4,getConfig().getItemStack("inventory." + p.getName() + ".item5"));
+            playerinv.setItem(5,getConfig().getItemStack("inventory." + p.getName() + ".item6"));
+            playerinv.setItem(6,getConfig().getItemStack("inventory." + p.getName() + ".item7"));
+            playerinv.setItem(7,getConfig().getItemStack("inventory." + p.getName() + ".item8"));
+            playerinv.setItem(8,getConfig().getItemStack("inventory." + p.getName() + ".item9"));
+            p.openInventory(playerinv);
+            return true;
+        }
+        if("discard".equals(command.getName())){
+            Inventory discardinv = Bukkit.createInventory(null,54,"§b垃圾桶");
+            p.closeInventory();
+            p.openInventory(discardinv);
+            return true;
+        }
+        if("boom".equals(command.getName())){
+            if(args.length != 2){
+                p.sendMessage(ChatColor.RED + "参数错误！");
             }
-            if("boom".equals(command.getName())){
-                if(args.length != 2){
-                    p.sendMessage(ChatColor.RED + "参数错误！");
+            else{
+                Player target = Bukkit.getPlayerExact(args[0]);
+                if(target == null){
+                    p.sendMessage(ChatColor.RED + "玩家不在线！");
                 }
                 else{
-                    Player target = Bukkit.getPlayerExact(args[0]);
-                    if(target == null){
-                        p.sendMessage(ChatColor.RED + "玩家不在线！");
+                    Location temp = target.getLocation();
+                    Location loc = new Location(target.getWorld(),temp.getX(),temp.getY(),temp.getZ());
+                    try{
+                        float strength=Float.parseFloat(args[1]);
+                        p.getWorld().createExplosion(loc,strength);
+                    }catch (NumberFormatException e){
+                        p.sendMessage(ChatColor.RED + "参数错误，期望float，却得到String");
+                    }
+                }
+                return true;
+            }
+        }
+        if("words".equals(command.getName())){
+            if(args.length != 2){
+                sender.sendMessage(ChatColor.RED + "参数错误！");
+                return false;
+            }
+            else{
+                if("add".equals(args[0])){
+                    List<String> words;
+                    getConfig().getStringList("words");
+                    words = getConfig().getStringList("words");
+                    if(!words.contains(args[1])){
+                        words.add(args[1]);
+                        sender.sendMessage(ChatColor.GOLD + "添加关键词" + args[1] + "成功！");
+                        getConfig().set("words",words);
                     }
                     else{
-                        Location temp = target.getLocation();
-                        Location loc = new Location(target.getWorld(),temp.getX(),temp.getY(),temp.getZ());
-                        try{
-                            float strength=Float.parseFloat(args[1]);
-                            p.getWorld().createExplosion(loc,strength);
-                        }catch (NumberFormatException e){
-                            p.sendMessage(ChatColor.RED + "参数错误，期望float，却得到String");
-                        }
+                        sender.sendMessage(ChatColor.RED + "已经存在此关键词！");
                     }
+                    saveConfig();
                     return true;
                 }
-            }
-            if("words".equals(command.getName())){
-                if(args.length != 2){
+                else if("del".equals(args[0])){
+                    List<String> words;
+                    getConfig().getStringList("words");
+                    words = getConfig().getStringList("words");
+                    if(words.contains(args[1])){
+                        words.remove(args[1]);
+                        sender.sendMessage(ChatColor.GOLD + "删除关键词" + args[1] + "成功！");
+                        getConfig().set("words",words);
+                    }
+                    else{
+                        sender.sendMessage(ChatColor.RED + "不存在此关键词！");
+                    }
+                    saveConfig();
+                    return true;
+                }
+                else{
                     sender.sendMessage(ChatColor.RED + "参数错误！");
                     return false;
                 }
+            }
+        }
+        if("mute".equals(command.getName())){
+            if(args.length!=1){
+                sender.sendMessage(ChatColor.RED + "参数错误！");
+                return false;
+            }
+            else{
+                if(getConfig().get("player." + args[0])==null){
+                    p.sendMessage(ChatColor.RED + "此玩家从未进入游戏！");
+                    return true;
+                }
                 else{
-                    if("add".equals(args[0])){
-                        List<String> words;
-                        getConfig().getStringList("words");
-                        words = getConfig().getStringList("words");
-                        if(!words.contains(args[1])){
-                            words.add(args[1]);
-                            sender.sendMessage(ChatColor.GOLD + "添加关键词" + args[1] + "成功！");
-                            getConfig().set("words",words);
+                    boolean mute = getConfig().getBoolean("player." + args[0] + ".mute");
+                    getConfig().set("player." + args[0] + ".mute",!mute);
+                    Player target = Bukkit.getPlayerExact(args[0]);
+                    if(target!=null){
+                        if(!mute){
+                            target.sendMessage(ChatColor.RED + "管理员" + ChatColor.GOLD + p.getName() + ChatColor.RED + "将你禁言");
+                            p.sendMessage(ChatColor.GOLD + "成功禁言" + ChatColor.RED + args[0]);
                         }
                         else{
-                            sender.sendMessage(ChatColor.RED + "已经存在此关键词！");
+                            target.sendMessage(ChatColor.RED + "管理员" + ChatColor.GOLD + p.getName() + ChatColor.RED + "将你解除禁言");
+                            p.sendMessage(ChatColor.GOLD + "成功解除禁言" + ChatColor.RED + args[0]);
                         }
-                        saveConfig();
-                        return true;
                     }
-                    else if("del".equals(args[0])){
-                        List<String> words;
-                        getConfig().getStringList("words");
-                        words = getConfig().getStringList("words");
-                        if(words.contains(args[1])){
-                            words.remove(args[1]);
-                            sender.sendMessage(ChatColor.GOLD + "删除关键词" + args[1] + "成功！");
-                            getConfig().set("words",words);
-                        }
-                        else{
-                            sender.sendMessage(ChatColor.RED + "不存在此关键词！");
-                        }
-                        saveConfig();
-                        return true;
-                    }
-                    else{
-                        sender.sendMessage(ChatColor.RED + "参数错误！");
-                        return false;
-                    }
+                    return true;
                 }
             }
+        }
+        if("login".equals(command.getName())){
+            if(args.length!=1){
+                sender.sendMessage(ChatColor.RED + "参数错误！");
+                return false;
+            }
+            String alg = getConfig().getString("security.algorithm");
+            if("MD5".equals(alg)){
+                String pass = Util.StringToMD5(args[0]);
+                String t = getConfig().getString("player." + sender.getName() + ".password");
+                if(pass.equals(t)){
+                    Login.add(sender.getName());
+                    sender.sendMessage(getColoredText(getConfig().getString("message.success-login")));
+                }
+                else{
+                    sender.sendMessage(getColoredText(getConfig().getString("message.wrong-password")));
+                }
+            }
+            else if("SHA1".equals(alg)){
+                String pass = Util.StringToSHA1(args[0]);
+                String t = getConfig().getString("player." + sender.getName() + ".password");
+                if(pass.equals(t)){
+                    Login.add(sender.getName());
+                    sender.sendMessage(getColoredText(getConfig().getString("message.success-login")));
+                }
+                else{
+                    sender.sendMessage(getColoredText(getConfig().getString("message.wrong-password")));
+                }
+            }
+            else{
+                String pass = Util.StringToSHA256(args[0]);
+                String t = getConfig().getString("player." + sender.getName() + ".password");
+                if(pass.equals(t)){
+                    Login.add(sender.getName());
+                    sender.sendMessage(getColoredText(getConfig().getString("message.success-login")));
+                }
+                else{
+                    sender.sendMessage(getColoredText(getConfig().getString("message.wrong-password")));
+                }
+            }
+        }
+        if("reg".equals(command.getName())){
+            if(args.length!=2){
+                sender.sendMessage(ChatColor.RED + "参数错误！");
+                return false;
+            }
+            if(!(args[0].equals(args[1]))){
+                sender.sendMessage(getColoredText(getConfig().getString("message.not-same")));
+                return true;
+            }
+            if(getConfig().getString("player." + sender.getName() + ".password") != null){
+                sender.sendMessage(getColoredText(getConfig().getString("message.is-register")));
+            }
+            String alg = getConfig().getString("security.algorithm");
+            if("MD5".equals(alg)){
+                String pass = Util.StringToMD5(args[0]);
+                getConfig().set("player." + sender.getName() + ".password",pass);
+                Login.add(sender.getName());
+                sender.sendMessage(getColoredText(getConfig().getString("message.success-register")));
+            }
+            else if("SHA1".equals(alg)){
+                String pass = Util.StringToSHA1(args[0]);
+                getConfig().set("player." + sender.getName() + ".password",pass);
+                Login.add(sender.getName());
+                sender.sendMessage(getColoredText(getConfig().getString("message.success-register")));
+            }
+            else{
+                String pass = Util.StringToSHA256(args[0]);
+                getConfig().set("player." + sender.getName() + ".password",pass);
+                Login.add(sender.getName());
+                sender.sendMessage(getColoredText(getConfig().getString("message.success-register")));
+            }
+        }
+        if("password".equals(command.getName())){
+            if(args.length!=1&&args.length!=4){
+                sender.sendMessage(ChatColor.RED + "参数错误！");
+                return true;
+            }
+            else{
+                if(args[0].equals("forgot")){
+
+                }
+            }
+        }
+        if("testmail".equals(command.getName())){
+            BukkitTask task = new JavaMail().runTask(this);
         }
         return false;
     }
@@ -854,12 +965,12 @@ public final class WnPlugin extends JavaPlugin implements Listener{
         for (String s : w) {
             if (e.getMessage().toUpperCase().contains(s.toUpperCase())) {
                 e.setMessage(ChatColor.RED + "******");
-                e.getPlayer().sendMessage(ChatColor.RED + "请勿口吐芬芳！（触发关键词" + "\"" + s + "\"" + "）您已被自动永久禁言！");
-                getConfig().set("player." + e.getPlayer().getName() + ".mute", true);
-                saveConfig();
+                e.getPlayer().sendMessage(ChatColor.RED + "请勿口吐芬芳！（触发关键词" + "\"" + s + "\"" + "）！");
                 return;
             }
         }
+        String colored = ChatColor.translateAlternateColorCodes('&', e.getMessage());
+        e.setMessage(colored);
     }
 
     /*
@@ -914,10 +1025,10 @@ public final class WnPlugin extends JavaPlugin implements Listener{
 
     @EventHandler
     public void onPlayerFoodLevelChange(FoodLevelChangeEvent e) {
-        if(e.getEntity().getType() == EntityType.PLAYER){
-            Player p = (Player)e.getEntity();
-            if(getConfig().getBoolean("player." + e.getEntity().getName() + ".godmode")){
-                if(p.getFoodLevel() != 20){
+        if (e.getEntity().getType() == EntityType.PLAYER) {
+            Player p = (Player) e.getEntity();
+            if (getConfig().getBoolean("player." + e.getEntity().getName() + ".godmode")) {
+                if (p.getFoodLevel() != 20) {
                     p.setFoodLevel(20);
                     e.setCancelled(true);
                 }

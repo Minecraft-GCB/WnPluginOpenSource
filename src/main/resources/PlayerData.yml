@@ -4,3 +4,15 @@
 ###################################################
 player:
 bank:
+  default:
+    max: 100000.0 #若配置为0则无上限
+    money: 100000.0 #余额
+    coin: 'points'
+    pay:
+      in: true #允许向银行存款
+      out: true #允许从银行取款
+    enable:
+      loan:
+        enable: true #true表示允许贷款
+        tax: 20 #贷款所需要多支付的钱的百分比
+      use: true #true表示启用此银行

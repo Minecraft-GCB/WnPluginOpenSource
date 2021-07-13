@@ -70,24 +70,44 @@ commands:
     description: Set words
     usage: use /words <add:del> <String word>
     permission: wnplugin.manage.words
-  password:
-    description: Password options
-    usage: use /password <reset:request> [String old] [String new] [String confirm]
   mute:
     description: Mute the player
-    usage: use /mute <String name> <disable:enable>
+    usage: use /mute <String name>
     permission: wnplugin.manage.mute
+  login:
+    description: Login to game
+    usage: use /login <String password>
+  reg:
+    description: Register an account
+    usage: use /reg <String password> <String confirm>
+  report:
+    description: Report player
+    usage: use /report <String name> <String reason>
+  password:
+    description: Change password
+    usage: use /password <change:forgot> [String old_password] [String new_password] [String confirm]
+  inquire:
+    description: Inquire reports
+    usage: use /inquire <String ReportID>
+    permission: wnplugin.manage.inquire
+  testmail:
+    description: testmail
+    usage: testmail
 permissions:
   wnplugin.manage.*:
     description: Management part
     children:
       wnplugin.manage.words: true
       wnplugin.manage.mute: true
+      wnplugin.manage.inquire: true
   wnplugin.manage.words:
     description: Set words
     default: op
   wnplugin.manage.mute:
     description: Mute the player
+    default: op
+  wnplugin.manage.inquire:
+    description: Inquire reports
     default: op
   wnplugin.*:
     description: Gives access to all wnplugin commands

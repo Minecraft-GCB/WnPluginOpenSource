@@ -1,4 +1,9 @@
 main-coin: points
+bank:
+  enable: true
+  max_num: 5
+  max_money: 10000000000.0
+  force_op: false
 coins:
   points:
     name: "点卷"
