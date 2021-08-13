@@ -14,21 +14,16 @@ import org.bukkit.event.entity.FoodLevelChangeEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.event.inventory.InventoryOpenEvent;
 import org.bukkit.event.inventory.PrepareAnvilEvent;
-import org.bukkit.event.player.AsyncPlayerChatEvent;
-import org.bukkit.event.player.PlayerGameModeChangeEvent;
-import org.bukkit.event.player.PlayerJoinEvent;
-import org.bukkit.event.player.PlayerQuitEvent;
+import org.bukkit.event.player.*;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.BookMeta;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitTask;
 
 import java.io.File;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 
 public final class WnPlugin extends JavaPlugin implements Listener{
     HashMap<Player,Player> sendTrade = new HashMap<>();
@@ -217,9 +212,11 @@ public final class WnPlugin extends JavaPlugin implements Listener{
         if(!judgePlayer(p)){
             e.setCancelled(true);
             p.sendMessage(getColoredText(getConfig().getString("message.hint")));
+            return;
         }
         if(getConfig().get("player." + name + ".nobreak") == null){
             getConfig().set("player." + name + ".nobreak",false);
+            saveConfig();
         }
         if(getConfig().getBoolean("player." + name + ".nobreak")){
             e.setCancelled(true);
@@ -231,11 +228,18 @@ public final class WnPlugin extends JavaPlugin implements Listener{
     }
 
     @EventHandler
+    @SuppressWarnings("deprecation")
     public void onBuildBlock(BlockCanBuildEvent e){
         Player p = e.getPlayer();
         String name = Objects.requireNonNull(e.getPlayer()).getName();
         if(getConfig().get("player." + name + ".build") == null){
             getConfig().set("player." + name + ".build",true);
+            saveConfig();
+        }
+        if(!judgePlayer(Objects.requireNonNull(p))){
+            e.setBuildable(false);
+            p.sendMessage(getColoredText(getConfig().getString("message.hint")));
+            return;
         }
         if(!getConfig().getBoolean("player." + name + ".build")){
             e.setBuildable(false);
@@ -791,6 +795,7 @@ public final class WnPlugin extends JavaPlugin implements Listener{
                         words.add(args[1]);
                         sender.sendMessage(ChatColor.GOLD + "添加关键词" + args[1] + "成功！");
                         getConfig().set("words",words);
+                        saveConfig();
                     }
                     else{
                         sender.sendMessage(ChatColor.RED + "已经存在此关键词！");
@@ -806,6 +811,7 @@ public final class WnPlugin extends JavaPlugin implements Listener{
                         words.remove(args[1]);
                         sender.sendMessage(ChatColor.GOLD + "删除关键词" + args[1] + "成功！");
                         getConfig().set("words",words);
+                        saveConfig();
                     }
                     else{
                         sender.sendMessage(ChatColor.RED + "不存在此关键词！");
@@ -832,6 +838,7 @@ public final class WnPlugin extends JavaPlugin implements Listener{
                 else{
                     boolean mute = getConfig().getBoolean("player." + args[0] + ".mute");
                     getConfig().set("player." + args[0] + ".mute",!mute);
+                    saveConfig();
                     Player target = Bukkit.getPlayerExact(args[0]);
                     if(target!=null){
                         if(!mute){
@@ -852,6 +859,10 @@ public final class WnPlugin extends JavaPlugin implements Listener{
                 sender.sendMessage(ChatColor.RED + "参数错误！");
                 return false;
             }
+            if(judgePlayer((Player) sender)){
+                sender.sendMessage(getColoredText(getConfig().getString("message.is-login")));
+                return true;
+            }
             String alg = getConfig().getString("security.algorithm");
             if("MD5".equals(alg)){
                 String pass = Util.StringToMD5(args[0]);
@@ -886,6 +897,7 @@ public final class WnPlugin extends JavaPlugin implements Listener{
                     sender.sendMessage(getColoredText(getConfig().getString("message.wrong-password")));
                 }
             }
+            return true;
         }
         if("reg".equals(command.getName())){
             if(args.length!=2){
@@ -898,41 +910,149 @@ public final class WnPlugin extends JavaPlugin implements Listener{
             }
             if(getConfig().getString("player." + sender.getName() + ".password") != null){
                 sender.sendMessage(getColoredText(getConfig().getString("message.is-register")));
+                return true;
+            }
+            if(judgePlayer((Player) sender)){
+                sender.sendMessage(getColoredText(getConfig().getString("message.is-login")));
+                return true;
             }
             String alg = getConfig().getString("security.algorithm");
             if("MD5".equals(alg)){
                 String pass = Util.StringToMD5(args[0]);
                 getConfig().set("player." + sender.getName() + ".password",pass);
+                saveConfig();
                 Login.add(sender.getName());
                 sender.sendMessage(getColoredText(getConfig().getString("message.success-register")));
             }
             else if("SHA1".equals(alg)){
                 String pass = Util.StringToSHA1(args[0]);
                 getConfig().set("player." + sender.getName() + ".password",pass);
+                saveConfig();
                 Login.add(sender.getName());
                 sender.sendMessage(getColoredText(getConfig().getString("message.success-register")));
             }
             else{
                 String pass = Util.StringToSHA256(args[0]);
                 getConfig().set("player." + sender.getName() + ".password",pass);
+                saveConfig();
                 Login.add(sender.getName());
                 sender.sendMessage(getColoredText(getConfig().getString("message.success-register")));
             }
+            saveConfig();
+            return true;
         }
         if("password".equals(command.getName())){
-            if(args.length!=1&&args.length!=4){
+            if(args.length!=3){
                 sender.sendMessage(ChatColor.RED + "参数错误！");
-                return true;
+                return false;
             }
             else{
-                if(args[0].equals("forgot")){
-
+                String alg = getConfig().getString("security.algorithm");
+                if("MD5".equals(alg)){
+                    String pass = Util.StringToMD5(args[0]);
+                    String t = getConfig().getString("player." + sender.getName() + ".password");
+                    if(pass.equals(t)){
+                        if(!args[1].equals(args[2])){
+                            sender.sendMessage(getColoredText(getConfig().getString("massage.not-same")));
+                        }
+                        else{
+                            getConfig().set("player." + sender.getName() + ".password",Util.StringToMD5(args[1]));
+                            sender.sendMessage(getColoredText(getConfig().getString("message.change-password")));
+                            saveConfig();
+                        }
+                    }
+                    else{
+                        sender.sendMessage(getColoredText(getConfig().getString("message.wrong-old-password")));
+                    }
+                }
+                else if("SHA1".equals(alg)){
+                    String pass = Util.StringToSHA1(args[0]);
+                    String t = getConfig().getString("player." + sender.getName() + ".password");
+                    if(pass.equals(t)){
+                        if(!args[1].equals(args[2])){
+                            sender.sendMessage(getColoredText(getConfig().getString("massage.not-same")));
+                        }
+                        else{
+                            getConfig().set("player." + sender.getName() + ".password",Util.StringToSHA1(args[1]));
+                            sender.sendMessage(getColoredText(getConfig().getString("message.change-password")));
+                            saveConfig();
+                        }
+                    }
+                    else{
+                        sender.sendMessage(getColoredText(getConfig().getString("message.wrong-old-password")));
+                    }
+                }
+                else{
+                    String pass = Util.StringToSHA256(args[0]);
+                    String t = getConfig().getString("player." + sender.getName() + ".password");
+                    if(pass.equals(t)){
+                        if(!args[1].equals(args[2])){
+                            sender.sendMessage(getColoredText(getConfig().getString("massage.not-same")));
+                        }
+                        else{
+                            getConfig().set("player." + sender.getName() + ".password",Util.StringToSHA256(args[1]));
+                            sender.sendMessage(getColoredText(getConfig().getString("message.change-password")));
+                            saveConfig();
+                        }
+                    }
+                    else{
+                        sender.sendMessage(getColoredText(getConfig().getString("message.wrong-old-password")));
+                    }
+                }
+                return true;
+            }
+        }
+        if("report".equals(command.getName())){
+            if(args.length!=2){
+                sender.sendMessage(ChatColor.RED + "参数错误！");
+                return false;
+            }
+            else{
+                OfflinePlayer target = Bukkit.getOfflinePlayer(args[0]);
+                if(!target.hasPlayedBefore()){
+                    sender.sendMessage(getColoredText(getConfig().getString("message.never-played")));
+                    return true;
+                }
+                else{
+                    Random r = new Random();
+                    int rand=r.nextInt(2147483647);
+                    while(getConfig().get("report." + Util.StringToMD5(Integer.toString(rand)))!=null){
+                        rand=r.nextInt(2147483647);
+                    }
+                    getConfig().set("report." + Util.StringToMD5(Integer.toString(rand)) + ".sender",sender.getName());
+                    getConfig().set("report." + Util.StringToMD5(Integer.toString(rand)) + ".target",args[0]);
+                    getConfig().set("report." + Util.StringToMD5(Integer.toString(rand)) + ".reason",args[1]);
+                    sender.sendMessage(ChatColor.GOLD + "举报成功！");
+                    sender.sendMessage(ChatColor.GOLD + "你的ReportID为" + ChatColor.RED + Util.StringToMD5(Integer.toString(rand)) + ChatColor.GOLD + "，请将此ID提供给OP以处理举报！");
+                    Util.setClipboardString(Util.StringToMD5(Integer.toString(rand)));
+                    sender.sendMessage(ChatColor.GOLD + "ReportID已复制");
+                    saveConfig();
+                    return true;
                 }
             }
         }
-        if("testmail".equals(command.getName())){
-            BukkitTask task = new JavaMail().runTask(this);
+        if("inquire".equals(command.getName())){
+            if(args.length!=1){
+                sender.sendMessage(ChatColor.RED + "参数错误！");
+                return false;
+            }
+            if(getConfig().get("report." + args[0])==null){
+                sender.sendMessage(ChatColor.RED + "ReportID" + ChatColor.GOLD + args[0] + ChatColor.RED + "不存在！");
+                return true;
+            }
+            else{
+                ItemStack ann = new ItemStack(Material.WRITTEN_BOOK);
+                BookMeta annBm = (BookMeta) ann.getItemMeta();
+                Objects.requireNonNull(annBm).setPages(Arrays.asList("举报者" + getConfig().getString("report." + args[0] + ".sender"),"举报对象" + getConfig().getString("report." + args[0] + ".target"),getConfig().getString("report." + args[0] + ".reason")));
+                annBm.setAuthor(getConfig().getString("report." + args[0] + ".sender"));
+                annBm.setTitle("举报对象" + getConfig().getString("report." + args[0] + ".target"));
+                ann.setItemMeta(annBm);
+                getConfig().set("report." + args[0],null);
+                ((Player) sender).openBook(ann);
+                return true;
+            }
         }
+        saveConfig();
         return false;
     }
 
@@ -1032,6 +1152,17 @@ public final class WnPlugin extends JavaPlugin implements Listener{
                     p.setFoodLevel(20);
                     e.setCancelled(true);
                 }
+            }
+        }
+    }
+
+    @EventHandler
+    public void OnPlayerSendCommand(PlayerCommandPreprocessEvent e){
+        if(!judgePlayer(e.getPlayer())){
+            String a=e.getMessage();
+            if((!a.startsWith("/login"))&&(!a.startsWith("/reg"))&&(!a.startsWith("/password"))){
+                e.setCancelled(true);
+                e.getPlayer().sendMessage(getColoredText(getConfig().getString("message.hint")));
             }
         }
     }

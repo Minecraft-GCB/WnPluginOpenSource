@@ -85,14 +85,11 @@ commands:
     usage: use /report <String name> <String reason>
   password:
     description: Change password
-    usage: use /password <change:forgot> [String old_password] [String new_password] [String confirm]
+    usage: use /password [String old_password] [String new_password] [String confirm]
   inquire:
     description: Inquire reports
     usage: use /inquire <String ReportID>
     permission: wnplugin.manage.inquire
-  testmail:
-    description: testmail
-    usage: testmail
 permissions:
   wnplugin.manage.*:
     description: Management part

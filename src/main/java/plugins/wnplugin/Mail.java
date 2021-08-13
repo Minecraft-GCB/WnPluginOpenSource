@@ -1,25 +1,19 @@
 package plugins.wnplugin;
 
-
 import org.bukkit.scheduler.BukkitRunnable;
 
-import javax.mail.Authenticator;
-import javax.mail.MessagingException;
-import javax.mail.PasswordAuthentication;
-import javax.mail.Session;
-import javax.mail.Transport;
+import javax.mail.*;
 import javax.mail.internet.InternetAddress;
 import javax.mail.internet.MimeMessage;
 import java.util.Properties;
-
-public class JavaMail extends BukkitRunnable {
+public class Mail extends BukkitRunnable {
     @Override
     public void run(){
         final String SMTP_HOST = "smtp.qq.com"; // SMTP 服务器地址
-        final String PORT = "587"; // SMTP 端口
-        final String TIMEOUT = "1000"; // 超时设置
-        final String USERNAME = "1265723427@qq.com"; // 使用的邮箱
-        final String PASSWORD = "nmysybaeddonifga"; // 授权码或密码
+        final String PORT = "465"; // SMTP 端口
+        final String TIMEOUT = "10000"; // 超时设置
+        final String USERNAME = "......"; // 使用的邮箱
+        final String PASSWORD = "......"; // 授权码或密码
         Properties properties = new Properties(); // Properties 收集信息
         properties.setProperty("mail.transport.protocol", "SMTP"); // 为了使用 SMTP
         properties.setProperty("mail.smtp.host", SMTP_HOST); // 设置服务器
@@ -37,7 +31,7 @@ public class JavaMail extends BukkitRunnable {
             MimeMessage msg = new MimeMessage(session);
             msg.setFrom(new InternetAddress(USERNAME));
             // 发件人，如果和登录用的地址不一样，有些 SMTP 服务器不发（认为是盗用）
-            final String PLAYER_MAIL = "1265723427@qq.com";
+            final String PLAYER_MAIL = "2468835317@qq.com";
             // 收件人，一般是玩家邮箱
             final String MAIL_HTML = "<!DOCTYPE html><html>HTML 文本内容</html>";
             // 邮件正文，应当从配置读取
