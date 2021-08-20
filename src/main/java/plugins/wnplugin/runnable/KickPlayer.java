@@ -1,4 +1,4 @@
-package plugins.wnplugin;
+package plugins.wnplugin.runnable;
 
 import org.bukkit.BanEntry;
 import org.bukkit.BanList;

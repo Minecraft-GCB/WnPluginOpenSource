@@ -21,6 +21,8 @@ import org.bukkit.inventory.meta.BookMeta;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitTask;
+import plugins.wnplugin.runnable.KickPlayer;
+import plugins.wnplugin.util.PasswordUtil;
 
 import java.io.File;
 import java.util.*;
@@ -28,6 +30,7 @@ import java.util.*;
 public final class WnPlugin extends JavaPlugin implements Listener{
     HashMap<Player,Player> sendTrade = new HashMap<>();
     public static List<String> Login = new ArrayList<>();
+    public static JavaPlugin instance;
     String Prefix = "[WnPlugin]";
     //Inventory anvil = Bukkit.createInventory(null,InventoryType.ANVIL,"§2Anvil");
 
@@ -41,6 +44,9 @@ public final class WnPlugin extends JavaPlugin implements Listener{
 
     @Override
     public final void onEnable() {
+        File temp = new File(this.getDataFolder(),"mail.yml");
+        if(!temp.exists())saveResource("mail.yml",true);
+        instance = this;
         // Plugin startup logic
         getServer().getPluginManager().registerEvents(this, this);
         //RecipeCraft();
@@ -865,7 +871,7 @@ public final class WnPlugin extends JavaPlugin implements Listener{
             }
             String alg = getConfig().getString("security.algorithm");
             if("MD5".equals(alg)){
-                String pass = Util.StringToMD5(args[0]);
+                String pass = PasswordUtil.StringToMD5(args[0]);
                 String t = getConfig().getString("player." + sender.getName() + ".password");
                 if(pass.equals(t)){
                     Login.add(sender.getName());
@@ -876,7 +882,7 @@ public final class WnPlugin extends JavaPlugin implements Listener{
                 }
             }
             else if("SHA1".equals(alg)){
-                String pass = Util.StringToSHA1(args[0]);
+                String pass = PasswordUtil.StringToSHA1(args[0]);
                 String t = getConfig().getString("player." + sender.getName() + ".password");
                 if(pass.equals(t)){
                     Login.add(sender.getName());
@@ -887,7 +893,7 @@ public final class WnPlugin extends JavaPlugin implements Listener{
                 }
             }
             else{
-                String pass = Util.StringToSHA256(args[0]);
+                String pass = PasswordUtil.StringToSHA256(args[0]);
                 String t = getConfig().getString("player." + sender.getName() + ".password");
                 if(pass.equals(t)){
                     Login.add(sender.getName());
@@ -918,21 +924,21 @@ public final class WnPlugin extends JavaPlugin implements Listener{
             }
             String alg = getConfig().getString("security.algorithm");
             if("MD5".equals(alg)){
-                String pass = Util.StringToMD5(args[0]);
+                String pass = PasswordUtil.StringToMD5(args[0]);
                 getConfig().set("player." + sender.getName() + ".password",pass);
                 saveConfig();
                 Login.add(sender.getName());
                 sender.sendMessage(getColoredText(getConfig().getString("message.success-register")));
             }
             else if("SHA1".equals(alg)){
-                String pass = Util.StringToSHA1(args[0]);
+                String pass = PasswordUtil.StringToSHA1(args[0]);
                 getConfig().set("player." + sender.getName() + ".password",pass);
                 saveConfig();
                 Login.add(sender.getName());
                 sender.sendMessage(getColoredText(getConfig().getString("message.success-register")));
             }
             else{
-                String pass = Util.StringToSHA256(args[0]);
+                String pass = PasswordUtil.StringToSHA256(args[0]);
                 getConfig().set("player." + sender.getName() + ".password",pass);
                 saveConfig();
                 Login.add(sender.getName());
@@ -949,14 +955,14 @@ public final class WnPlugin extends JavaPlugin implements Listener{
             else{
                 String alg = getConfig().getString("security.algorithm");
                 if("MD5".equals(alg)){
-                    String pass = Util.StringToMD5(args[0]);
+                    String pass = PasswordUtil.StringToMD5(args[0]);
                     String t = getConfig().getString("player." + sender.getName() + ".password");
                     if(pass.equals(t)){
                         if(!args[1].equals(args[2])){
                             sender.sendMessage(getColoredText(getConfig().getString("massage.not-same")));
                         }
                         else{
-                            getConfig().set("player." + sender.getName() + ".password",Util.StringToMD5(args[1]));
+                            getConfig().set("player." + sender.getName() + ".password", PasswordUtil.StringToMD5(args[1]));
                             sender.sendMessage(getColoredText(getConfig().getString("message.change-password")));
                             saveConfig();
                         }
@@ -966,14 +972,14 @@ public final class WnPlugin extends JavaPlugin implements Listener{
                     }
                 }
                 else if("SHA1".equals(alg)){
-                    String pass = Util.StringToSHA1(args[0]);
+                    String pass = PasswordUtil.StringToSHA1(args[0]);
                     String t = getConfig().getString("player." + sender.getName() + ".password");
                     if(pass.equals(t)){
                         if(!args[1].equals(args[2])){
                             sender.sendMessage(getColoredText(getConfig().getString("massage.not-same")));
                         }
                         else{
-                            getConfig().set("player." + sender.getName() + ".password",Util.StringToSHA1(args[1]));
+                            getConfig().set("player." + sender.getName() + ".password", PasswordUtil.StringToSHA1(args[1]));
                             sender.sendMessage(getColoredText(getConfig().getString("message.change-password")));
                             saveConfig();
                         }
@@ -983,14 +989,14 @@ public final class WnPlugin extends JavaPlugin implements Listener{
                     }
                 }
                 else{
-                    String pass = Util.StringToSHA256(args[0]);
+                    String pass = PasswordUtil.StringToSHA256(args[0]);
                     String t = getConfig().getString("player." + sender.getName() + ".password");
                     if(pass.equals(t)){
                         if(!args[1].equals(args[2])){
                             sender.sendMessage(getColoredText(getConfig().getString("massage.not-same")));
                         }
                         else{
-                            getConfig().set("player." + sender.getName() + ".password",Util.StringToSHA256(args[1]));
+                            getConfig().set("player." + sender.getName() + ".password", PasswordUtil.StringToSHA256(args[1]));
                             sender.sendMessage(getColoredText(getConfig().getString("message.change-password")));
                             saveConfig();
                         }
@@ -1016,15 +1022,15 @@ public final class WnPlugin extends JavaPlugin implements Listener{
                 else{
                     Random r = new Random();
                     int rand=r.nextInt(2147483647);
-                    while(getConfig().get("report." + Util.StringToMD5(Integer.toString(rand)))!=null){
+                    while(getConfig().get("report." + PasswordUtil.StringToMD5(Integer.toString(rand)))!=null){
                         rand=r.nextInt(2147483647);
                     }
-                    getConfig().set("report." + Util.StringToMD5(Integer.toString(rand)) + ".sender",sender.getName());
-                    getConfig().set("report." + Util.StringToMD5(Integer.toString(rand)) + ".target",args[0]);
-                    getConfig().set("report." + Util.StringToMD5(Integer.toString(rand)) + ".reason",args[1]);
+                    getConfig().set("report." + PasswordUtil.StringToMD5(Integer.toString(rand)) + ".sender",sender.getName());
+                    getConfig().set("report." + PasswordUtil.StringToMD5(Integer.toString(rand)) + ".target",args[0]);
+                    getConfig().set("report." + PasswordUtil.StringToMD5(Integer.toString(rand)) + ".reason",args[1]);
                     sender.sendMessage(ChatColor.GOLD + "举报成功！");
-                    sender.sendMessage(ChatColor.GOLD + "你的ReportID为" + ChatColor.RED + Util.StringToMD5(Integer.toString(rand)) + ChatColor.GOLD + "，请将此ID提供给OP以处理举报！");
-                    Util.setClipboardString(Util.StringToMD5(Integer.toString(rand)));
+                    sender.sendMessage(ChatColor.GOLD + "你的ReportID为" + ChatColor.RED + PasswordUtil.StringToMD5(Integer.toString(rand)) + ChatColor.GOLD + "，请将此ID提供给OP以处理举报！");
+                    PasswordUtil.setClipboardString(PasswordUtil.StringToMD5(Integer.toString(rand)));
                     sender.sendMessage(ChatColor.GOLD + "ReportID已复制");
                     saveConfig();
                     return true;
@@ -1051,6 +1057,9 @@ public final class WnPlugin extends JavaPlugin implements Listener{
                 ((Player) sender).openBook(ann);
                 return true;
             }
+        }
+        if("mail".equals(command.getName())){
+            BukkitTask task = new Mail().runTaskAsynchronously(this);
         }
         saveConfig();
         return false;

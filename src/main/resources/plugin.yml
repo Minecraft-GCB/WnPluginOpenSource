@@ -90,6 +90,9 @@ commands:
     description: Inquire reports
     usage: use /inquire <String ReportID>
     permission: wnplugin.manage.inquire
+  mail:
+    description: Bind mail
+    usage: use /mail <bind:unbind:change> [String code]
 permissions:
   wnplugin.manage.*:
     description: Management part
