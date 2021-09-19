@@ -35,10 +35,6 @@ commands:
     description: Set player build
     usage: use /setbuild <disable:enable> [String name]
     permission: wnplugin.setbuild
-  resettry:
-    description: Reset player try times
-    usage: use /resettry <String name>
-    permission: wnplugin.resettry
   fixmode:
     description: Set fix mode
     usage: use /fixmode <disable:enable> [String allowPlayer]
@@ -120,7 +116,6 @@ permissions:
       wnplugin.changegamemode: true
       wnplugin.nobreak: true
       wnplugin.setbuild: true
-      wnplugin.resettry: true
       wnplugin.fixmode: true
       wnplugin.fixlist: true
       wnplugin.openinv: true

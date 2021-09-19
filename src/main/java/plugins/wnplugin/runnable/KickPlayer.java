@@ -1,14 +1,10 @@
 package plugins.wnplugin.runnable;
 
-import org.bukkit.BanEntry;
 import org.bukkit.BanList;
 import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitRunnable;
-
-import java.util.Date;
-import java.util.Set;
 
 public class KickPlayer extends BukkitRunnable{
     Player p;
@@ -23,11 +19,7 @@ public class KickPlayer extends BukkitRunnable{
 
     @Override
     public void run(){
-        if(mode == 1){
-            p.kickPlayer(ChatColor.RED + "尝试放置方块次数过多，自动踢出！");
-            plugin.getServer().getBanList(BanList.Type.NAME).addBan(p.getName(),ChatColor.RED + "尝试放置方块次数过多，占用服务器资源",null,null);
-        }
-        else if(mode == 2){
+        if(mode == 2){
             p.kickPlayer(ChatColor.RED + "服务器进入维修模式，您不在修复人员名单内！");
         }
         else if(mode == 3){

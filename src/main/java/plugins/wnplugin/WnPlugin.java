@@ -22,6 +22,7 @@ import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitTask;
 import plugins.wnplugin.runnable.KickPlayer;
+import plugins.wnplugin.runnable.LoginHint;
 import plugins.wnplugin.util.PasswordUtil;
 
 import java.io.File;
@@ -73,6 +74,7 @@ public final class WnPlugin extends JavaPlugin implements Listener{
         // Plugin shutdown logic
         Bukkit.broadcastMessage(Prefix + ChatColor.RED + " 插件关闭，丢失了" + sendTrade.size() + "个交易");
         saveConfig();
+        Bukkit.getScheduler().cancelTasks(this);
     }
 
     /*
@@ -129,6 +131,7 @@ public final class WnPlugin extends JavaPlugin implements Listener{
 
     @EventHandler
     public final void onPlayerJoin(PlayerJoinEvent e){
+        BukkitTask task = new LoginHint(5,e.getPlayer()).runTaskTimerAsynchronously(this,0,40);
         Player p = e.getPlayer();
         String name = e.getPlayer().getName();
         if(p.hasPlayedBefore()){
@@ -142,13 +145,9 @@ public final class WnPlugin extends JavaPlugin implements Listener{
         else {
             e.setJoinMessage(ChatColor.YELLOW + "欢迎萌新" + p.getName() + "进入服务器！");
             //Starter Kit
-            ItemStack food = new ItemStack(Material.COOKED_PORKCHOP,16);
-            ItemStack sword = new ItemStack(Material.WOODEN_SWORD,1);
-            p.getInventory().addItem(food,sword);
-        }
-        if(getConfig().getInt("player." + name + ".try") > 5){
-            BukkitTask kick = new KickPlayer(e.getPlayer(),1,this).runTaskLater(this, 10);
-            return;
+            //ItemStack food = new ItemStack(Material.COOKED_PORKCHOP,16);
+            //ItemStack sword = new ItemStack(Material.WOODEN_SWORD,1);
+            //p.getInventory().addItem(food,sword);
         }
         if(getConfig().get("player." + p.getName() + ".allow") == null){
             getConfig().set("player." + p.getName() + ".allow",false);
@@ -172,7 +171,7 @@ public final class WnPlugin extends JavaPlugin implements Listener{
         Player p = e.getPlayer();
         String name = e.getPlayer().getName();
         if(getConfig().getBoolean("fix." + "enable") && !name.equals(getConfig().get("fix." + "allow"))){
-            e.setQuitMessage(ChatColor.YELLOW + "不在修复人员名单中的玩家"  + p.getName() + "在维修模式中尝试进入服务器！已自动踢出");
+            e.setQuitMessage(null);
         }
         else if(getConfig().get("player." + name + ".try") != null && getConfig().getInt("player." + name + ".try") > 5){
             e.setQuitMessage(ChatColor.YELLOW + p.getName() + "因尝试放置方块次数过多，被自动踢出了服务器！");
@@ -250,17 +249,6 @@ public final class WnPlugin extends JavaPlugin implements Listener{
         if(!getConfig().getBoolean("player." + name + ".build")){
             e.setBuildable(false);
             e.getPlayer().sendMessage(ChatColor.RED + "你无权放置方块！");
-            if(getConfig().get("player." + name + ".try") == null){
-                getConfig().set("player." + name + ".try",1);
-                saveConfig();
-            }
-            else{
-                getConfig().set("player." + name + ".try",getConfig().getInt("player." + name + ".try") + 1);
-                saveConfig();
-                if(getConfig().getInt("player." + name + ".try") > 5){
-                    e.getPlayer().kickPlayer(ChatColor.RED + "尝试放置方块次数过多，自动踢出！");
-                }
-            }
         }
     }
 
@@ -334,24 +322,6 @@ public final class WnPlugin extends JavaPlugin implements Listener{
                 else{
                     sender.sendMessage(ChatColor.RED + "参数错误！");
                     return false;
-                }
-            }
-        }
-        else if("resettry".equals(command.getName())){
-            if(args.length != 1){
-                sender.sendMessage(ChatColor.RED + "参数错误！");
-                return false;
-            }
-            else{
-                if(getConfig().get("player." + args[0] + ".try") == null){
-                    sender.sendMessage(ChatColor.RED + "玩家" + args[0] + "没有尝试的记录！");
-                    return true;
-                }
-                else{
-                    getConfig().set("player." + args[0] + ".try",0);
-                    sender.sendMessage(ChatColor.GOLD + "重置" + args[0] + "的尝试记录成功！");
-                    saveConfig();
-                    return true;
                 }
             }
         }
