@@ -1,6 +1,6 @@
 #是否启用邮箱功能
 enable: false
-#邮箱
+#使用的邮箱
 emailAccount: "xxxx@xx.com"
 #SMTP授权码/密码
 emailPwd: "xxxx"
