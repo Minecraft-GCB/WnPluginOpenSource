@@ -1,4 +1,4 @@
-#是否启用
+#是否启用邮箱功能
 enable: false
 #邮箱
 emailAccount: "xxxx@xx.com"
