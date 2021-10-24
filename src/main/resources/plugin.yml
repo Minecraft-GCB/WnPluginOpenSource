@@ -89,6 +89,9 @@ commands:
   mail:
     description: Bind mail
     usage: use /mail <bind:unbind:change> [String code]
+  chat:
+    description: Chat with group
+    usage: 过长的命令简介，使用/chat help完整查看
 permissions:
   wnplugin.manage.*:
     description: Management part

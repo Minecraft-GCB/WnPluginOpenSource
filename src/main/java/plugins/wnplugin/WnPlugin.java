@@ -50,6 +50,7 @@ public final class WnPlugin extends JavaPlugin implements Listener{
         instance = this;
         // Plugin startup logic
         getServer().getPluginManager().registerEvents(this, this);
+        Objects.requireNonNull(this.getCommand("chat")).setExecutor(new Chat());
         //RecipeCraft();
         File t = new File(getDataFolder(),"config.yml");
         if(!t.exists()){

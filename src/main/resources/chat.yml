@@ -1,0 +1,14 @@
+#启用群聊
+enable_group_chat: true
+#启用私聊
+enable_private_chat: true
+#允许设置管理员
+allow_operator: true
+#允许转让群聊
+allow_transfer: false
+#最大群聊创建数量
+group_max: 2
+#最大群聊加入数量
+join_max: 3
+#群聊最大人数
+max_group_pep: 5
